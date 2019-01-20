@@ -27,8 +27,8 @@ int main(){
 
 		if(fork() == 0){
 			i = 0;
-			char *words[MAX];
 			char *args[MAX];
+			char *argn[MAX];
 			char *file_in;
 			char *file_out;
 			int fd_in, fd_out;
@@ -36,49 +36,54 @@ int main(){
 
 			word = strtok (name," \t");
 			while (word != NULL){
-				words[i++] = word;
+				args[i++] = word;
 			    word = strtok (NULL, " \t");
 			}
-			words[i] = NULL;
-
-			for(j=0; j<i; j++){
-				if(!strcmp(words[j], "<")){
-					file_in = words[j+1];
-					if((fd_in = open(file_in, O_RDONLY, 0)) < 0){
+			args[i] = NULL;
+			int index1,index2;
+			index1=index2=31000;
+			int skip=0;
+			for(j=0; args[j]!=NULL; j++){
+				if(!strcmp(args[j], "<")){
+					file_in = args[j+1];
+					//index1=j+1;
+					j++;
+					//argn[skip++]=args[j];
+					if((fd_in = open(file_in, O_RDONLY)) < 0){
 						perror("Couldn't Open File");
 						exit(0);
 					}
-					int k = j;
-					while (words[k+1]) {
-	                    words[k] = words[k+2];
-	                    k++; 
-	                }
 					dup2(fd_in, STDIN_FILENO);
 				}
-				if(!strcmp(words[j], ">")){
-					file_out = words[j+1];
-					if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0){
+				else if(!strcmp(args[j], ">")){
+					file_out = args[j+1];
+					//index2=j+1;
+					j++;
+					if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU)) < 0){
 						perror("Couldn't Open File");
 						exit(0);
 					}
-					int k = j;
-					while (words[k]) {
-	                    words[k] = words[k+2];
-	                    k++; 
-	                }
-
-					dup2(fd_out, STDOUT_FILENO);
+					printf("%s ",file_out);
+					close(STDOUT_FILENO); 
+					dup(fd_out);
 				}
-				if(!strcmp(words[j], "&")){
+				else if(!strcmp(args[j], "&")){
 					flag = 1;
 					close(p1[0]);
 					printf("FLAG: %d\n",flag);
 					write(p1[1], &flag, sizeof(int));
 				}
+				else
+				{
+					argn[skip++]=args[j];
+				}
+				
+				
 			}	
+			argn[skip]=NULL;
 
-			printf("FILE: %s\n", file_out);
-			execvp(args[0], args);
+			//printf("FILE: %s\n", file_out);
+			execvp(argn[0], argn);
 			printf("Not a valid command\n");
 			kill(getpid(),SIGTERM);
 		}
