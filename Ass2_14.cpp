@@ -31,7 +31,7 @@ int main(){
 			char *argn[MAX];
 			char *file_in;
 			char *file_out;
-			int fd_in, fd_out;
+			int fd_in, fd_out, skip = 0;
 			char *word;
 
 			word = strtok (name," \t");
@@ -40,15 +40,11 @@ int main(){
 			    word = strtok (NULL, " \t");
 			}
 			args[i] = NULL;
-			int index1,index2;
-			index1=index2=31000;
-			int skip=0;
+
 			for(j=0; args[j]!=NULL; j++){
 				if(!strcmp(args[j], "<")){
 					file_in = args[j+1];
-					//index1=j+1;
 					j++;
-					//argn[skip++]=args[j];
 					if((fd_in = open(file_in, O_RDONLY)) < 0){
 						perror("Couldn't Open File");
 						exit(0);
@@ -57,13 +53,11 @@ int main(){
 				}
 				else if(!strcmp(args[j], ">")){
 					file_out = args[j+1];
-					//index2=j+1;
 					j++;
 					if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU)) < 0){
 						perror("Couldn't Open File");
 						exit(0);
 					}
-					printf("%s ",file_out);
 					close(STDOUT_FILENO); 
 					dup(fd_out);
 				}
@@ -73,8 +67,7 @@ int main(){
 					printf("FLAG: %d\n",flag);
 					write(p1[1], &flag, sizeof(int));
 				}
-				else
-				{
+				else{
 					argn[skip++]=args[j];
 				}
 				
