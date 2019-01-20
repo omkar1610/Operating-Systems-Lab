@@ -8,7 +8,7 @@ using namespace std;
 
 
 int main(){
-	int i, j, k, p1[2];
+	int i, j, k, p1[2], flag;
 	char name[MAX];
 	// char cwd[256];
 
@@ -18,12 +18,21 @@ int main(){
 	printf("Welcome to BAsh\n");
 
 	while(1){
-		int flag = 0;
 		printf(">>> ");
 		gets(name);
 
 		if(!strcmp(name, "exit"))
 			break;
+		
+		flag = 0;
+		for(i=0; 1; i++){
+			if(name[i] == '\0')
+				break;
+			if(name[i] == '&'){
+				printf("Yes\n");
+				flag = 1;
+			}
+		}
 
 		if(fork() == 0){
 			i = 0;
@@ -31,6 +40,7 @@ int main(){
 			char *argn[MAX];
 			char *file_in;
 			char *file_out;
+			char *next_instr;
 			int fd_in, fd_out, skip = 0;
 			char *word;
 
@@ -57,36 +67,37 @@ int main(){
 					if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU)) < 0){
 						perror("Couldn't Open File");
 						exit(0);
-					}
-					close(STDOUT_FILENO); 
-					dup(fd_out);
+					} 
+					dup2(fd_out, STDOUT_FILENO);
 				}
 				else if(!strcmp(args[j], "&")){
-					flag = 1;
-					close(p1[0]);
-					printf("FLAG: %d\n",flag);
-					write(p1[1], &flag, sizeof(int));
+					// flag = 1;
+					// close(p1[0]);
+					// printf("FLAG: %d\n",flag);
+					// write(p1[1], &flag, sizeof(int));
+				}
+				else if(!strcmp(args[j], "|")){
+					next_instr = 
 				}
 				else{
 					argn[skip++]=args[j];
-				}
-				
-				
+				}				
 			}	
 			argn[skip]=NULL;
 
-			//printf("FILE: %s\n", file_out);
 			execvp(argn[0], argn);
 			printf("Not a valid command\n");
 			kill(getpid(),SIGTERM);
 		}
 		else{
-			close(p1[1]);
-			int a = 0;
-			read(p1[0], &a, sizeof(int));
+			// close(p1[1]);
+			// int a = 0;
+			// read(p1[0], &a, sizeof(int));
 
-			if(!a)
+			if(flag == 0)
 				wait(NULL);
+			else
+				usleep(10);
 		}
 	}
 	return 0;
