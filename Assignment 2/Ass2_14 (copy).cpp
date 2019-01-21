@@ -10,6 +10,7 @@ using namespace std;
 int main(){
 	int i, j, k, p[MAX][2], flag;
 	char name[MAX];
+	char namee[MAX][MAX];
 	// char cwd[256];
 
 	// getcwd(cwd, sizeof(cwd));
@@ -48,12 +49,16 @@ int main(){
 		int r=0;
 		for(r=0;piped[r]!=NULL;r++)
 			cout<<"\n"<<r<<":"<<piped[r];
-		cout<<"\n"<<r;
+		cout<<"\n"<<r<<"\n";
 		p[0][0]=STDIN_FILENO;
+		//p[0][1]=STDIN_FILENO;
 		p[r][1]=STDOUT_FILENO;
+		//p[r][0]=STDOUT_FILENO;
 		
-		for(int l=0; piped[l]!=NULL;l++)
+		for(int l=0; l<r;l++)
 		{
+			cout<<"\nWe are here to execute "<<piped[l];
+			cout<<"\n";
 			
 			if(fork() == 0)
 			{
@@ -70,8 +75,8 @@ int main(){
 			
 
 			
-				strcpy(name,piped[l]);
-				word = strtok (name," \t");
+				strcpy(namee[l],piped[l]);
+				word = strtok (namee[l]," \t");
 				i=0;
 				while (word != NULL)
 				{
@@ -79,12 +84,15 @@ int main(){
 				    	word = strtok (NULL, " \t");
 				}
 				args[i] = NULL;
-
+				
+				//close(p[l][0]);
+				dup2(p[l][0],0);
+				//close(p[l+1][1]);
+				dup2(p[l+1][1],1);
 				for(j=0; args[j]!=NULL; j++)
 				{
 				
-					dup2(p[l][0],STDIN_FILENO);
-					dup2(p[l+1][1],STDOUT_FILENO);
+					
 					if(!strcmp(args[j], "<"))
 					{
 						file_in = args[j+1];
@@ -94,7 +102,7 @@ int main(){
 							perror("Couldn't Open File");
 							exit(0);
 						}
-						dup2(fd_in, p[l][0]);
+						dup2(fd_in, 0);
 					}
 					else if(!strcmp(args[j], ">"))
 					{
@@ -105,7 +113,7 @@ int main(){
 							perror("Couldn't Open File");
 							exit(0);
 						} 
-						dup2(fd_out, p[l+1][1]);
+						dup2(fd_out, 1);
 					}
 					else
 					{
@@ -115,7 +123,7 @@ int main(){
 				argn[skip]=NULL;
 
 				execvp(argn[0], argn);
-				printf("Not a valid command\n");
+				printf("Not a valid command\n");   
 				kill(getpid(),SIGTERM);
 			}
 			else
@@ -123,11 +131,15 @@ int main(){
 				// close(p1[1]);
 				// int a = 0;
 				// read(p1[0], &a, sizeof(int));
-
-				wait(NULL);
+				
+				
+				usleep(100000);
+				cout<<"\nWe have succesfully done process "<<l;
+				cout<<"\n";
 				//continue;
 			}
 		}
+		wait(NULL);
 	}
 	return 0;
 }
