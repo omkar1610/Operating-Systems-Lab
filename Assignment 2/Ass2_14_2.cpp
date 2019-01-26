@@ -111,7 +111,7 @@ int main(){
 					  
 				}
 				else{
-					usleep(1000);
+					// usleep(1000);
 				}
 			}
 			wait(NULL);
