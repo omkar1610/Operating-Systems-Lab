@@ -67,9 +67,7 @@ int main(){
 				    word = strtok (NULL, " \t");
 				}
 				args[i] = NULL;
-				for(int r =0 ; r<i; r++)
-					if(!strcmp("emacs",args[r]))
-						f=1;
+
 				if((status=fork()) == 0){
 					if(l>0){
 						close(p[l-1][1]);
@@ -113,12 +111,10 @@ int main(){
 					  
 				}
 				else{
-					if(f==0)
-						usleep(1000);
-					else
-						while((wpid = wait(&status)) > 0);
+					usleep(1000);
 				}
 			}
+			wait(NULL);
 			exit(0);
 		}
 		else{
