@@ -1,0 +1,36 @@
+################################	
+	  ASSIGNMENT 2 REPORT
+################################
+
+
+
+	This assignment implements a basic SHELL, which supports basic operations, input/output redirection, background process and 
+piped commands. The basic working strategy is discussed below. The code is further commented to facilitate the ease of understaning.
+
+
+i) We run in a an infinite while loop and take the command as an input. If the input command is "exit", the SHELL exists.
+
+ii) We then search the presence of '&' in the command. If it is present, we raise a flag indicating the presence of background process.
+
+iii) We then check if there is any command after '&'. If it is there, then it is an invalid command.
+
+iv) Now we fork a process to execute the command. In the parent process, if background flag is not raised, then we wait for the process to end, else we continue.
+
+v) In the child process, we tokenize the string wrt pipe('|'). We now create appropriate number of pipes to execute each command.
+
+vi) Now for each of the piped commands, we further tokenize them wrt spaces and tab an fork a child process to execute each one of them.
+
+vii) We duplicate the STDIN and STDOUT with the appropriate pipes and close others accordingly.
+
+viii) The input and output redirection is then handled and the command is executed using execvp() system call.
+
+ix) In the parent process, we close the already used pipes to stop the commands from taking further inputs.
+
+x) The process then waits for the processes to complete and exit.
+
+
+These steps can be followed with the code using the comments annotated in the code. Lets dicuss the drawbacks of the implementation which can be improved in further versions.
+
+DRAWBACKS:
+i) This SHELL does not support giving spaces in the front and at the back. However spaces can be given in between pipes. This can be solved by trimming the spaces in the input command.
+ii) In a basic input/output redirection command, the file name and the command must be atleast 1 space separated. This can be solved by scanning the command and separating the commands in place of tokenizing wrt spaces and tab(Point no. vi)).
