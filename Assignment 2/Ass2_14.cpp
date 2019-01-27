@@ -8,96 +8,161 @@ using namespace std;
 
 
 int main(){
-	int i, j, k, p1[2], flag;
-	char name[MAX];
-	// char cwd[256];
+	int i, j, k, N, flag;
+	int status=0;
+	int stat=0;
+	char comd[MAX];
+	char *name;
+	pid_t wpid;
 
-	// getcwd(cwd, sizeof(cwd));
-
-	pipe(p1);
-	printf("Welcome to BAsh\n");
+	printf("Welcome to SHELL:\n");
 
 	while(1){
+		// Taking the input from prompt
 		printf(">>> ");
-		gets(name);
+		gets(comd);
 
-		if(!strcmp(name, "exit"))
+		// Comparing if the input is exit or not
+		if(!strcmp(comd, "exit")){
+			printf("Exiting from SHELL\n");
 			break;
+		}
 		
+		// Checking the presence of '&', which denotes background process
 		flag = 0;
 		for(i=0; 1; i++){
-			if(name[i] == '\0')
+			if(comd[i] == '\0')
 				break;
-			if(name[i] == '&'){
-				printf("Yes\n");
+			if(comd[i] == '&')
 				flag = 1;
-			}
 		}
 
-		if(fork() == 0){
-			i = 0;
-			char *args[MAX];
-			char *argn[MAX];
-			char *file_in;
-			char *file_out;
-			char *next_instr;
-			int fd_in, fd_out, skip = 0;
-			char *word;
+		// Checking if '&' is present at the end or not. If not, then its an error
+		char *word;
+		word = strtok(comd, "&");
+		i = 0;
+		while (word != NULL){
+			name = word;
+			i++;
+			word = strtok(NULL, "&");
+		}
+		if(i>1){
+			printf("Not a valid command\n");
+			continue;
+		}
 
-			word = strtok (name," \t");
-			while (word != NULL){
-				args[i++] = word;
-			    word = strtok (NULL, " \t");
+
+		// Fork a child and execute the input command
+		if((stat=fork()) == 0){
+			char *piped[MAX];
+			char *pipesep;
+
+			// Tokenizing the input command wrt pipe('|')
+			pipesep = strtok(name, "|");
+			N = 0;
+			while (pipesep != NULL){
+				piped[N++] = pipesep;
+				pipesep = strtok(NULL, "|");
 			}
-			args[i] = NULL;
 
-			for(j=0; args[j]!=NULL; j++){
-				if(!strcmp(args[j], "<")){
-					file_in = args[j+1];
-					j++;
-					if((fd_in = open(file_in, O_RDONLY)) < 0){
-						perror("Couldn't Open File");
-						exit(0);
+			// If there are N piped commands, then create N-1 pipes 
+			int p[N-1][2];
+			for(j = 0; j < N-1; j++)
+				if(pipe(p[j]) < 0){
+					printf("Pipe Creation failed\n");
+					exit(0);
+				}
+	
+			// Now for each of the N commands, do the following
+			for(j=0; j<N; j++){
+				char *args[MAX];
+				char *argn[MAX];
+				char *file_in;
+				char *file_out;
+				char *next_instr;
+				int fd_in, fd_out, skip = 0;
+			
+				// Tokeinizing each command wrt space an tab
+				word = strtok (piped[j]," \t");
+				i=0;
+				while (word != NULL){
+					args[i++] = word;
+				    word = strtok (NULL, " \t");
+				}
+				// Append a NULL in the end
+				args[i] = NULL;
+
+				// Fork a child process to execute each of the N piped commands
+				if((status=fork()) == 0){
+					// Duplicate STDIN with the appropriate pipe and close the read and write end accordingly
+					if(j>0){
+						close(p[j-1][1]);
+						dup2(p[j-1][0], 0);
+						close(p[j-1][0]);
 					}
-					dup2(fd_in, STDIN_FILENO);
-				}
-				else if(!strcmp(args[j], ">")){
-					file_out = args[j+1];
-					j++;
-					if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU)) < 0){
-						perror("Couldn't Open File");
-						exit(0);
-					} 
-					dup2(fd_out, STDOUT_FILENO);
-				}
-				else if(!strcmp(args[j], "&")){
-					// flag = 1;
-					// close(p1[0]);
-					// printf("FLAG: %d\n",flag);
-					// write(p1[1], &flag, sizeof(int));
-				}
-				else if(!strcmp(args[j], "|")){
-					next_instr = 
+					// Duplicate STDOUT with the appropriate pipe and close the read and write end accordingly
+					if(j != N-1){
+						close(p[j][0]);
+						dup2(p[j][1], 1);
+						close(p[j][1]);
+					}
+
+					// Loop to execute input/output redirection
+					for(k=0; args[k]!=NULL; k++){
+						// Input redirection	
+						if(!strcmp(args[k], "<")){
+							file_in = args[k+1];
+							k++;
+							if((fd_in = open(file_in, O_RDONLY)) < 0){
+								perror("Couldn't Open File");
+								exit(0);
+							}
+							// Duplicate the file with STDIN
+							dup2(fd_in, 0);
+							close(fd_in);
+						}
+						// Output redirection
+						else if(!strcmp(args[k], ">")){
+							file_out = args[k+1];
+							k++;
+							if((fd_out = open(file_out, O_WRONLY|O_CREAT|O_TRUNC,S_IRWXU)) < 0){
+								perror("Couldn't Open File");
+								exit(0);
+							} 
+							// Duplicate the file with STDOUT
+							dup2(fd_out, 1);
+							close(fd_out);
+						}
+						else{
+							argn[skip++]=args[k];
+						}				
+					}	
+					argn[skip]=NULL;
+
+					// Execute the command using execvp() call
+					execvp(argn[0], argn);
+					printf("Not a valid command\n"); 
+					exit(0);
+					  
 				}
 				else{
-					argn[skip++]=args[j];
-				}				
-			}	
-			argn[skip]=NULL;
-
-			execvp(argn[0], argn);
-			printf("Not a valid command\n");
-			kill(getpid(),SIGTERM);
+					// Close the already used pipes in the parent process
+					for(i=0; i<j; i++){
+						close(p[i][0]);
+						close(p[i][1]);
+					}
+				}
+			}
+			// Wait for all the processes to end
+			while((wpid = wait(&status)) > 0);
+			exit(0);
 		}
 		else{
-			// close(p1[1]);
-			// int a = 0;
-			// read(p1[0], &a, sizeof(int));
-
-			if(flag == 0)
-				wait(NULL);
-			else
-				usleep(10);
+			// If there is no '&', then wait for the process to end
+			if(!flag){
+				while((wpid = wait(&stat)) > 0);
+			}
+			usleep(10000);
 		}
 	}
 	return 0;
