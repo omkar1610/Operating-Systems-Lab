@@ -2,14 +2,14 @@
 
 Read the question(.pdf) file
 
-ASSIGNMENT 1
-a) Implementation of fork and pipe to sort 150 numbers. 
+ASSIGNMENT 1  
+a) Implementation of fork and pipe to sort 150 numbers.   
 b) Run an executable command using execvp() system call.
 
 
-ASSIGNMENT 2
-Implementation of a shell like bash which supports
-i) basic commands(eg. ./a.out, ls -l, gcc a.c, etc.)
-ii) Input/Output redirection
-iii) Background processes using '&'
-iv) Piped commands
+ASSIGNMENT 2  
+Implementation of a shell like bash which supports  
+i) basic commands(eg. ./a.out, ls -l, gcc a.c, etc.)  
+ii) Input/Output redirection  
+iii) Background processes using '&'  
+iv) Piped commands  
