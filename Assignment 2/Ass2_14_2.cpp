@@ -72,10 +72,12 @@ int main(){
 					if(l>0){
 						close(p[l-1][1]);
 						dup2(p[l-1][0], 0);
+						close(p[l-1][0]);
 					}
 					if(l != k-1){
 						close(p[l][0]);
 						dup2(p[l][1], 1);
+						close(p[l][1]);
 					}
 
 					for(j=0; args[j]!=NULL; j++){	
@@ -111,7 +113,10 @@ int main(){
 					  
 				}
 				else{
-					// usleep(1000);
+					for(int w=0; w<l; w++){
+						close(p[w][0]);
+						close(p[w][1]);
+					}
 				}
 			}
 			wait(NULL);
