@@ -93,7 +93,7 @@ int npsjf(Process p[], int N){
 int rr(Process p[], int N){
 	queue <Process> q;
 	Process a;
-	int i, j, k, tn = 0, t = 0, delta = 4;
+	int i, j, k, tn = 0, t = 0, delta = 2;
 
 	i=0;
 	j=0;
@@ -139,10 +139,10 @@ int rr(Process p[], int N){
 }
 
 
-int main(){
+int main(int argc, char *argv[]){
 	int N, t = 0, i, tn_fcfs, tn_npsjf, tn_psjf, tn_rr, tn_hrn;
 	double r;
-	cin>>N;
+	N = atoi(argv[1]);
 
 	srand(time(0));
 	Process p[N];
@@ -164,13 +164,13 @@ int main(){
 	}
 	
 	tn_fcfs = fcfs(p, N);
-	cout<<"\nFCFS TN: "<<tn_fcfs<<endl;
+	cout<<tn_fcfs<<endl;
 
 	tn_npsjf = npsjf(p, N);
-	cout<<"NPSJF TN: "<<tn_npsjf<<endl;
+	cout<<tn_npsjf<<endl;
 
 	tn_rr = rr(p, N);
-	cout<<"RR TN: "<<tn_rr<<endl;
+	cout<<tn_rr<<endl;
 
 	return 0;
 }
