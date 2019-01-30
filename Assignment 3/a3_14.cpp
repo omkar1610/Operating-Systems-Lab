@@ -18,7 +18,7 @@ int fcfs(Process p[], int N){
 	i=0;
 	j=0;
 	while(i < N){
-		for(k=j; 1; k++){
+		for(k=j; k<N; k++){
 			if(t >= p[k].arr_time)
 				q.push(p[k]);
 			else
@@ -56,7 +56,7 @@ int npsjf(Process p[], int N){
 	j=0;
 	while(i < N){
 		vec.clear();
-		for(k=j; 1; k++){
+		for(k=j; k<N; k++){
 			if(t >= p[k].arr_time){
 				q.push(p[k]);
 			}
@@ -78,6 +78,55 @@ int npsjf(Process p[], int N){
 			i++;
 			tn += (t-a.arr_time) + a.cpu_burst; 
 			t += a.cpu_burst;
+		}
+		else if(i < N){
+			t++;
+			continue;
+		}
+		else
+			break;
+	}
+	return tn;
+}
+
+
+int rr(Process p[], int N){
+	queue <Process> q;
+	Process a;
+	int i, j, k, tn = 0, t = 0, delta = 4;
+
+	i=0;
+	j=0;
+	while(i < N){
+		for(k=j; k<N; k++){
+			if(t >= p[k].arr_time)
+				q.push(p[k]);
+			else
+				break;
+		}
+		j=k;
+		if(!q.empty()){
+			a = q.front();
+			q.pop();
+			if(a.cpu_burst>delta){
+				a.cpu_burst -= delta;
+				tn += (t-a.arr_time) + delta;
+				t += delta;
+				a.arr_time = t;
+				for(k=j; k<N; k++){
+					if(t >= p[k].arr_time)
+						q.push(p[k]);
+					else
+						break;
+				}
+				j=k;
+				q.push(a);
+			}
+			else{
+				i++;
+				tn += (t-a.arr_time) + a.cpu_burst;
+				t += a.cpu_burst;
+			}
 		}
 		else if(i < N){
 			t++;
@@ -120,6 +169,8 @@ int main(){
 	tn_npsjf = npsjf(p, N);
 	cout<<"NPSJF TN: "<<tn_npsjf<<endl;
 
+	tn_rr = rr(p, N);
+	cout<<"RR TN: "<<tn_rr<<endl;
 
 	return 0;
 }
