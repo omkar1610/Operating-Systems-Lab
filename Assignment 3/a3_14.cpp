@@ -1,5 +1,6 @@
 #include<bits/stdc++.h>
 #include<string>
+#include<unistd.h>
 #define MEAN 1.0
 using namespace std;
 
@@ -90,6 +91,12 @@ int npsjf(Process p[], int N){
 }
 
 
+int psjf(Process p[], int N){
+	int tn = 0;
+	return tn;
+}
+
+
 int rr(Process p[], int N){
 	queue <Process> q;
 	Process a;
@@ -139,12 +146,18 @@ int rr(Process p[], int N){
 }
 
 
+int hrn(Process p[], int N){
+	int tn = 0;
+	return tn;
+}
+
+
 int main(int argc, char *argv[]){
 	int N, t = 0, i, tn_fcfs, tn_npsjf, tn_psjf, tn_rr, tn_hrn;
 	double r;
 	N = atoi(argv[1]);
 
-	srand(time(0));
+	srand(getpid());
 	Process p[N];
 	for(i=0; i<N; i++){
 		p[i].pid = i;
@@ -169,8 +182,14 @@ int main(int argc, char *argv[]){
 	tn_npsjf = npsjf(p, N);
 	cout<<tn_npsjf<<endl;
 
+	tn_psjf = psjf(p, N);
+	cout<<tn_psjf<<endl;
+
 	tn_rr = rr(p, N);
 	cout<<tn_rr<<endl;
+
+	tn_hrn = hrn(p, N);
+	cout<<tn_hrn<<endl;
 
 	return 0;
 }

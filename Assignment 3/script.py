@@ -1,8 +1,9 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import subprocess
 from subprocess import Popen, PIPE
- 
-print ("Hey this is Python Script Running\n")
+
+print("Python script to run a3_14.cpp file")
 
 cmd = "a3_14.cpp"
 subprocess.call(["g++",cmd])
@@ -19,9 +20,14 @@ for i in range(len(args)):
 		tn = np.array(map(int, tn))
 		tn_fcfs += tn[0]
 		tn_npsjf += tn[1]
-		tn_rr += tn[2]
+		tn_psjf += tn[2]
+		tn_rr += tn[3]
+		tn_hrn += tn[4]
 		# print(tn)
 	
 	print("FCFS ATN: " + str(float(tn_fcfs)/10))
 	print("NPSJF ATN: " + str(float(tn_npsjf)/10))
+	print("PSJF ATN: " + str(float(tn_psjf)/10))
 	print("RR ATN: " + str(float(tn_rr)/10))
+	print("HRN ATN: " + str(float(tn_hrn)/10))
+	print("\n")
