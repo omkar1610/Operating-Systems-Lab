@@ -102,6 +102,7 @@ int psjf(Process p[], int N){
 	i=0;
 	j=0;
 	while(1){
+		vec.clear();
 		if(i >= N)
 			break;
 		for(k=j; k<N; k++){
@@ -124,16 +125,17 @@ int psjf(Process p[], int N){
 			q.pop();
 			if(a.cpu_burst == 1){
 				tn += (t-a.arr_time) + 1;
+				t++;
 				i++;
 			}
 			else{
 				a.cpu_burst -= 1;
 				tn += (t-a.arr_time) + 1;
-				a.arr_time += 1;
+				t++;
+				a.arr_time = t;
 				q.push(a);
 			}
 		}
-		t++;
 	}
 
 	return tn;

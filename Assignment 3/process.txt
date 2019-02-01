@@ -1,5 +1,5 @@
 PROCESS ID	ARRIVAL TIME	CPU BURST
-0		0		12
-1		0		12
-2		2		20
-3		5		13
+0		0		14
+1		2		13
+2		3		12
+3		3		5
