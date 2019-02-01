@@ -44,7 +44,7 @@ int fcfs(Process p[], int N){
 	return tn;
 }
 
-bool compare(Process a, Process b){
+bool compareCPU(Process a, Process b){
 	return a.cpu_burst<b.cpu_burst;
 }
 int npsjf(Process p[], int N){
@@ -70,7 +70,7 @@ int npsjf(Process p[], int N){
 			vec.push_back(q.front());
 			q.pop();
 		}
-		sort(vec.begin(), vec.end(), compare);
+		sort(vec.begin(), vec.end(), compareCPU);
 		for(it=vec.begin(); it<vec.end(); it++){
 			q.push(*it);
 		}
@@ -116,7 +116,7 @@ int psjf(Process p[], int N){
 			vec.push_back(q.front());
 			q.pop();
 		}
-		sort(vec.begin(), vec.end(), compare);
+		sort(vec.begin(), vec.end(), compareCPU);
 		for(it=vec.begin(); it<vec.end(); it++){
 			q.push(*it);
 		}
@@ -137,7 +137,6 @@ int psjf(Process p[], int N){
 			}
 		}
 	}
-
 	return tn;
 }
 
@@ -191,8 +190,51 @@ int rr(Process p[], int N){
 }
 
 
+bool comparePriority(const pair<Process, int> &a, const pair<Process, int> &b){
+	double rRatio1 = ((double)(a.second - a.first.arr_time) + a.first.cpu_burst) / a.first.cpu_burst;
+	double rRatio2 = ((double)(b.second - b.first.arr_time) + b.first.cpu_burst) / b.first.cpu_burst;
+	return rRatio1>rRatio2;
+}
 int hrn(Process p[], int N){
-	int tn = 0;
+	queue <Process> q;
+	vector < pair<Process, int> > vec;
+	Process a;
+	int i, j, k, tn = 0, t = 0, it;
+
+	i=0;
+	j=0;
+	while(i < N){
+		vec.clear();
+		for(k=j; k<N; k++){
+			if(t >= p[k].arr_time){
+				q.push(p[k]);
+			}
+			else
+				break;
+		}
+		j=k;
+		while(!q.empty()){
+			vec.push_back(make_pair(q.front(), t));
+			q.pop();
+		}
+		sort(vec.begin(), vec.end(), comparePriority);
+		for(it=0; it<vec.size(); it++){
+			q.push(vec[it].first);
+		}
+		if(!q.empty()){
+			a = q.front();
+			q.pop();
+			i++;
+			tn += (t-a.arr_time) + a.cpu_burst; 
+			t += a.cpu_burst;
+		}
+		else if(i < N){
+			t++;
+			continue;
+		}
+		else
+			break;
+	}
 	return tn;
 }
 

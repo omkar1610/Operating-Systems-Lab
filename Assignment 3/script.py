@@ -10,12 +10,14 @@ subprocess.call(["g++","-std=c++11",cmd])
 
 color = ["r","g","b","y","k"]
 args = ["10", "20", "30", "40", "50", "60", "70", "80", "90", "100"]
+# args = ["10", "50", "100"]
 tn = []
 atn = [[0.0 for i in range(len(args))] for j in range(5)]
 
 for i in range(len(args)):
 	for j in range(10):
-		result = subprocess.Popen(["./a.out",args[i]], stdout=subprocess.PIPE)
+		print(i)
+		result = subprocess.Popen(["./a.out", args[i]], stdout=subprocess.PIPE)
 		out = result.stdout.read()
 		tn = out.split('\n')[:-1]
 		tn = np.array(map(int, tn))
@@ -28,6 +30,6 @@ for i in range(len(args)):
 args = np.array(map(int, args))
 for k in range(5):
 	plt.figure()
-	plt.scatter(args, atn[k], c=color[k])
+	plt.plot(args, atn[k], c=color[k])
 
 plt.show()
