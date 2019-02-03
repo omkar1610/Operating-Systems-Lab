@@ -41,7 +41,7 @@ int fcfs(Process p[], int N){
 		else
 			break;
 	}
-	return tn;
+	return tn/N;
 }
 
 bool compareCPU(Process a, Process b){
@@ -88,7 +88,7 @@ int npsjf(Process p[], int N){
 		else
 			break;
 	}
-	return tn;
+	return tn/N;
 }
 
 
@@ -137,7 +137,7 @@ int psjf(Process p[], int N){
 			}
 		}
 	}
-	return tn;
+	return tn/N;
 }
 
 
@@ -186,7 +186,7 @@ int rr(Process p[], int N){
 		else
 			break;
 	}
-	return tn;
+	return tn/N;
 }
 
 
@@ -235,7 +235,7 @@ int hrn(Process p[], int N){
 		else
 			break;
 	}
-	return tn;
+	return tn/N;
 }
 
 
