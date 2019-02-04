@@ -1,0 +1,58 @@
+Name: Sarthak Chakraborty
+Roll: 16CS30044
+Group: 14
+
+
+######################################
+			   REPORT
+######################################
+
+
+This is a report describing the procedures we followed for the various process scheduling algorithms. We have also written a script which can run the program having the 5 algorithms given some value of N. The script runs for some N, each running 10 times, and then plots a graph of the ATN value with respect to N.
+
+
+1. FIRST COME FIRST SERVE (fcfs)
+   -----------------------------
+	i) We have maintained a Job Queue, where we push the processes as it comes.
+	ii) If the Queue is non empty, pop the front element from the Queue and complete the process.
+	iii) Increase turnaround time, time completed, as well as the number of processes completed.
+
+
+2. NON PREEMPTIVE SHORTEST JOB FIRST (npsjf)
+   -----------------------------------------
+	i) We have maintained a Job Queue, where we push the processes as it comes.
+	ii) The processes are then sorted according to their increasing value of burst time in Queue.
+	iii) Pop the front element of Queue, which is now the shortest process and complete it.
+	iv) Increase turnaround time, time completed, as well as the number of processes completed.
+
+
+3. PREEMPTIVE SHORTEST JOB FIRST (psjf)
+   ------------------------------------
+	i) We have maintained a Job Queue, where we push the processes as it comes.
+	ii) The processes are sorted according to their burst time.
+	iii) Pop the first element of the queue and decrease its burst time by a time unit.
+	iv) Push the job at the end of the queue.
+	v) If only one time unit is left for the job to complete, complete it and increment the number of completed jobs by 1.
+	vi) Go to step 1 for repeat of the process until all N jobs are not completed.
+
+
+4. ROUND ROBIN (rr)
+   ----------------
+   i) The processes are popped from the job queue as it is pushed.
+   ii) Each process is allocated a time quantum of 2 time units in CPU.
+   iii) If the burst is greater than the time quantum, then it is pushed at the back of the queue after decreasing its burst by 2 units.
+   iv) If the burst left is less than the time quantum, then the process is completed.
+
+
+5. HIGHEST RATION NEXT (hrn)
+   -------------------------
+	i) We have maintained a job queue, where we push the processes as it arrives.
+	ii) The processes are sorted according to decreasing order of response ratio ( RR = (Time since arrival + CPU Burst) / CPU Burst).
+	iii) Pop the first element of the queue, which now has the highest response ratio and complete it.
+
+
+NOTE: We have implemented a non preemptive version of HRN. (Both non-preemptive as well as preemptive version of priority scheduling exist). For the generation of the a random variable from an exponential distribution, we have chosen Lambda=1. This ensures that 99% of the values are between 0 and 10 as asked in the question.
+
+The theoretical lower bound for FCFS is the average of all the CPU burst. This case arrives when the jobs are disjoint, that is, the arrival time of the jobs are after when the previous jobs has been completed. For this case, the Average turnaround time is the Average of the CPU Burst, which converges to the expected value of the unofrom random distribution ftom which the burst has been sampled. Thus E(Burst) = 10.5, and hence the theoretical lower bound is around 10.5.
+
+The plots for the various scheduling algorithms has been given in the Report submitted as pdf.
