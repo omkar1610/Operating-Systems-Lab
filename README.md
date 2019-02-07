@@ -17,3 +17,7 @@ iv) Piped commands
 
 ### ASSIGNMENT 3
 Implementation of various CPU scheduling algoeithms and running them with a python script. Plots for the Average Turnaround Time(ATN) are also available.
+
+
+### ASSIGNMENT 4
+Implementation of CPU scheduling using threads. Producer-Consumer problem is implemented using threads and scheduled using Round Robin scheduling algorithm with a specific time quantum.
