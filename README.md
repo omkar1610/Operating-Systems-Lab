@@ -21,3 +21,7 @@ Implementation of various CPU scheduling algoeithms and running them with a pyth
 
 ### ASSIGNMENT 4
 Implementation of CPU scheduling using threads. Producer-Consumer problem is implemented using threads and scheduled using Round Robin scheduling algorithm with a specific time quantum.
+
+
+### ASSIGNMENT 5
+Implementation of Demand Paging Algorithm by creating MMU and process scheduler that schedules processes in FCFS.
