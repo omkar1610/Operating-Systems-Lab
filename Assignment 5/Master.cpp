@@ -1,126 +1,256 @@
-#include <bits/stdc++.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/msg.h>
-#include <time.h>
+#include<bits/stdc++.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<sys/ipc.h>
+#include<sys/shm.h>
+#include<sys/msg.h>
+#include<errno.h>
 
 using namespace std;
 
-struct mesg_buffer{ 
-    long mesg_type; 
-    pid_t pid; 
-} message;
+
+// Page Table
+struct sm1_t{
+	int frame_no;
+	bool valid;
+};
+
+
+// Free frame list
+struct sm2_t{
+	int curr;	// current free frames available
+	int frame_list[];
+};
+
+
+// PCB
+struct sm3_t{
+	pid_t pid;
+	int m;
+	int f_cnt;
+	int f_allo;
+};
+
+
+int finished = 0;
+
+void sig_handler1(int signo){
+	cout<<signo<<endl;
+	finished = 1;
+}
+
+
+void sig_handler2(int signo){
+	cout<<signo<<endl;
+}
+
 
 int main(){
-	int k, m, f, i, j;
-	pid_t pid1, pid2;
+	int k, m, f;
+	int i;
+	pid_t pid1, pid2, pid3;
 
-	cout<<"Enter no. of processes: ";
+	pid1 = getpid();
+
+	cout<<"Enter k (number of processes): ";
 	cin>>k;
-	cout<<"Enter max no. of pages per process: ";
+	cout<<"Enter m (max page number for any process): ";
 	cin>>m;
-	cout<<"Enter total no. of frames in main memory: ";
+	cout<<"Enter f (Number of frames): ";
 	cin>>f;
 
-	key_t key1 = ftok("/", 65);
-	int sm1 = shmget(key1, m, IPC_CREAT|0666);
+	srand(time(NULL));
 
-	key_t key2 = ftok("/", 66);
-	int sm2 = shmget(key2, f, IPC_CREAT|0666);
+	signal(SIGUSR1, sig_handler1);
+	signal(SIGINT, sig_handler2);
 
-	key_t key3 = ftok("/", 67);
-	int mq1 = msgget(key3, IPC_CREAT|0666);
 
-	key_t key4 = ftok("/", 68);
-	int mq2 = msgget(key4, IPC_CREAT|0666);
-
-	key_t key5 = ftok("/", 69);
-	int mq3 = msgget(key5, IPC_CREAT|0666);
-
+	// Create Page Table
+	key_t ptb_key = ftok("Master.cpp", 56);
+	cout<<ptb_key<<endl;
+	int sm1id_pt = shmget(ptb_key, m*sizeof(sm1_t)*k, IPC_CREAT|0666);
+	cout<<sm1id_pt<<endl;
+	if(sm1id_pt == -1){
+		cout<<errno<<endl;
+	}
+	sm1_t *pt_t = (sm1_t *)shmat(sm1id_pt, NULL, 0);
+	if(*(int *)pt_t == -1){
+		cout<<*(int *)pt_t<<endl;
+		cout<<errno<<endl;
+	}
 	
-	
-	if((pid1=fork()) == 0){
-		//creates scheduler
-		//pass mq1, mq2
+			
+	for(i=0; i<k*m; i++){
+		pt_t[i].frame_no = -1;
+		pt_t[i].valid = 0;
+	}
 
-		char *c1 = new char[to_string(key3).length() + 1];	// MQ1
-		strcpy(c1, to_string(key3).c_str());
-		char *c2 = new char[to_string(key4).length() + 1];	// MQ2
-		strcpy(c2, to_string(key4).c_str());
 
-		char *argv[] = {"./sched", c1, c2, (char *)NULL};
-		execvp(argv[0], argv);
+
+	// Creat Free Frame List
+	key_t ff_key = ftok("Master.cpp", 66);
+	int sm2id_ff = shmget(ff_key, sizeof(sm2_t) + f*sizeof(int), IPC_CREAT|IPC_EXCL|0666);
+	sm2_t *ff_t = (sm2_t *)shmat(sm2id_ff, NULL, 0);
+
+	for(i=0; i<f; i++){
+		ff_t->frame_list[i] = -1;
+	}
+	ff_t->curr = f-1;
+
+
+
+	// Create PCB
+	key_t pcb_key = ftok("Master.cpp", 67);
+	int sm3id_pcb = shmget(pcb_key, k*sizeof(sm3_t), IPC_CREAT|IPC_EXCL|0666);
+	sm3_t *pcb_t = (sm3_t *)shmat(sm3id_pcb, NULL, 0);
+
+	int totpage = 0;
+	for(i=0; i<k; i++){
+		pcb_t[i].pid = i;
+		pcb_t[i].m = rand()%m + 1;
+		pcb_t[i].f_allo = 0;
+		totpage += pcb_t[i].m;
+	}
+	int allo_frame = 0;
+	int max = 0, maxi = 0;
+	for(i=0; i<k; i++){
+		pcb_t[i].pid = -1;
+		int allo = (int)(pcb_t[i].m * (float)(f-k)/totpage);
+		if(pcb_t[i].m > max){
+			max = pcb_t[i].m;
+			maxi = i;
+		}
+		allo_frame = allo_frame + allo;
+		pcb_t[i].f_cnt = allo;
+	}
+	pcb_t[maxi].f_cnt += f - allo_frame;
+
+
+
+	// MQ1
+	key_t mq1_key = ftok("Master.cpp", 68);
+	int mq1id = msgget(mq1_key, IPC_CREAT|IPC_EXCL|0666);
+	if (mq1id == -1)
+	{
+		printf("Message Queue1 creation failed %d",mq1_key);
+		exit(1);
+	}
+
+	// MQ2
+	key_t mq2_key = ftok("Master.cpp", 69);
+	int mq2id = msgget(mq2_key, IPC_CREAT|IPC_EXCL|0666);
+	if (mq2id == -1)
+	{
+		printf("Message Queue1 creation failed %d",mq2_key);
+		exit(1);
+	}
+
+	// MQ3
+	key_t mq3_key = ftok("Master.cpp", 70);
+	int mq3id = msgget(mq3_key, IPC_CREAT|IPC_EXCL|0666);
+	if (mq3id == -1)
+	{
+		printf("Message Queue1 creation failed %d",mq3_key);
+		exit(1);
+	}
+
+
+
+	if((pid2=fork()) == 0)
+	{
+		char *argv[9] ={"/usr/bin/xterm", "-hold", "-e", "./sched"};
+
+		argv[4] = new char[to_string(mq1id).length() + 1];
+		strcpy(argv[4], to_string(mq1id).c_str());		
+		argv[5] = new char[to_string(mq2id).length() + 1];
+		strcpy(argv[5], to_string(mq2id).c_str());
+		argv[6] = new char[to_string(k).length() + 1];
+		strcpy(argv[6], to_string(k).c_str());
+		argv[7] = new char[to_string(pid1).length() + 1];
+		strcpy(argv[7], to_string(pid1).c_str());
+		argv[8]=NULL;
+				
+		execv(argv[0],argv);
 		exit(0);
 	}
-	else{
-		if((pid1=fork()) == 0){
-			//creates MMU
-			//pass mq2, mq3, sm1, sm2
 
-			char *c1 = new char[to_string(key4).length() + 1];	// MQ2
-			strcpy(c1, to_string(key4).c_str());
-			char *c2 = new char[to_string(key5).length() + 1];	// MQ3
-			strcpy(c2, to_string(key5).c_str());
-			char *c3 = new char[to_string(key1).length() + 1];	// SM1
-			strcpy(c3, to_string(key1).c_str());
-			char *c4 = new char[to_string(key2).length() + 1];	// SM2
-			strcpy(c4, to_string(key2).c_str());
 
-			char *argv[] = {"./MMU", c1, c2, c3, c4, (char *)NULL};
-			execvp(argv[0], argv);
+	if((pid3=fork()) == 0)
+	{
+		char *argv[13] ={"/usr/bin/xterm", "-hold", "-e", "./MMU"};
+
+		argv[4] = new char[to_string(mq2id).length() + 1];
+		strcpy(argv[4], to_string(mq2id).c_str());		
+		argv[5] = new char[to_string(mq3id).length() + 1];
+		strcpy(argv[5], to_string(mq3id).c_str());
+		argv[6] = new char[to_string(sm1id_pt).length() + 1];
+		strcpy(argv[6], to_string(sm1id_pt).c_str());
+		argv[7] = new char[to_string(sm2id_ff).length() + 1];
+		strcpy(argv[7], to_string(sm2id_ff).c_str());
+		argv[8] = new char[to_string(sm3id_pcb).length() + 1];
+		strcpy(argv[8], to_string(sm3id_pcb).c_str());
+		argv[9] = new char[to_string(m).length() + 1];
+		strcpy(argv[9], to_string(m).c_str());
+		argv[10] = new char[to_string(k).length() + 1];
+		strcpy(argv[10], to_string(k).c_str());
+		argv[12]=NULL;
+
+		execv(argv[0], argv);
+	}
+
+
+	// Create process
+	for(i=0; i<k; i++){
+		int x = rand() % (10*pcb_t[i].m - 2*pcb_t[i].m) + 2*pcb_t[i].m;
+
+		int page_ref[x+1];
+		int j;
+		for(j=0; j<x; j++)
+			page_ref[j] = rand()%m;
+		page_ref[j]=-9;
+
+		if(fork() == 0){
+			int r=7;
+			char* argv[x+r+2] ={"/usr/bin/xterm", "-hold", "-e", "./process"};
+			
+			argv[4] = new char[to_string(i).length() + 1];
+			strcpy(argv[4] , to_string(i).c_str());
+			argv[5] = new char[to_string(mq1id).length() + 1];
+			strcpy(argv[5] , to_string(mq1id).c_str());
+			argv[6] = new char[to_string(mq3id).length() + 1];
+			strcpy(argv[6] , to_string(mq3id).c_str());
+		
+			int k;
+			for(k=r; k<x+1+r; k++)
+			{
+				argv[k] = new char[to_string(page_ref[k-r]).length() + 1];
+				strcpy(argv[k], to_string(page_ref[k-r]).c_str());
+			
+				if(page_ref[k-r]==-9)
+					break;
+			}
+			argv[k]=NULL;
+			for(int i=0;i<k;i++)
+				cout<<"\nprocess created with args "<<argv[i]<<endl;
+			execv(argv[0], argv);
 			exit(0);
 		}
-		else{
-			if(fork()==0){
-				for(i=0; i<k; i++){
-					if(fork()==0){
-						srand(getpid());
-
-						int mi = rand() % m + 1;
-						int x = rand() % (10*mi - 2*mi) + 2*mi;
-						int page_ref[x];
-
-						for(j=0; j<x; j++)
-							page_ref[j] = rand()%mi;
-
-						for(j=0; j<x; j++)
-							cout<<page_ref[j]<<" ";
-						cout<<endl;
-
-						pid_t pid = getpid();
-						message.mesg_type = 1;
-						message.pid = pid;
-						cout<<"MASTER: "<<pid<<endl;
-						msgsnd(mq1, &message, sizeof(message), 0);
-
-						// exit(0);
-						//passes page reference string, mq1, mq3
-
-						char *c1 = new char[to_string(pid1).length() + 1];	// PID of MMU
-						strcpy(c1, to_string(pid1).c_str());
-						char *c2 = new char[to_string(key3).length() + 1];	// MQ1
-						strcpy(c2, to_string(key3).c_str());
-						char *c3 = new char[to_string(key5).length() + 1];	// MQ3
-						strcpy(c3, to_string(key5).c_str());
-
-						char *argv[] = {"./process", c1, c2, c3, (char *)NULL};
-						execvp(argv[0], argv);
-					}
-					cout<<endl;
-					usleep(250000);
-				}
-				exit(0);
-			}
-			else{
-				int w, status;
-				while((w = wait(&status)) > 0);
-				exit(0);
-			}
-		}
+		usleep(250000);
 	}
+
+
+	if(!finished)
+		pause();
+
+
+	shmctl(sm1id_pt, IPC_RMID, NULL);
+	shmctl(sm2id_ff, IPC_RMID, NULL);
+	shmctl(sm3id_pcb, IPC_RMID, NULL);
+	msgctl(mq1id, IPC_RMID, NULL);
+	msgctl(mq2id, IPC_RMID, NULL);
+	msgctl(mq3id, IPC_RMID, NULL);
+
 
 	return 0;
 }

@@ -1,11 +1,15 @@
-MMU: MMU.cpp process
-	g++ MMU.cpp -o MMU
+Master: Master.cpp sched
+	g++ -g -std=c++11 Master.cpp -o Master
 
-process: process.cpp sched
-	g++ process.cpp -o process
+sched: sched.cpp process
+	g++ -g -std=c++11 sched.cpp -o sched
 
-sched: sched.cpp Master
-	g++ sched.cpp -o sched
+process: process.cpp MMU
+	g++ -g -std=c++11 process.cpp -o process
 
-Master: Master.cpp
-	g++ -std=c++0x Master.cpp -o Master
+MMU: MMU.cpp
+	g++ -g -std=c++11 MMU.cpp -o MMU
+
+
+clean: 
+	rm master sched process MMU sm1 sm2 sm3 mq1 mq2 mq3
