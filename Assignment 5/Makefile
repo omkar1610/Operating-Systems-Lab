@@ -12,4 +12,4 @@ MMU: MMU.cpp
 
 
 clean: 
-	rm master sched process MMU sm1 sm2 sm3 mq1 mq2 mq3
+	rm Master sched process MMU

@@ -34,22 +34,23 @@ struct sm3_t{
 
 
 int finished = 0;
+pid_t pid1, pid2, pid3;
+
 
 void sig_handler1(int signo){
 	cout<<signo<<endl;
 	finished = 1;
+	cout<<"\nWaiting on you to check MMU. Will kill in a few secs"<<endl;
+	
+	kill(pid3, SIGTERM);
+	kill(pid2, SIGUSR2);
 }
 
-
-void sig_handler2(int signo){
-	cout<<signo<<endl;
-}
 
 
 int main(){
 	int k, m, f;
 	int i;
-	pid_t pid1, pid2, pid3;
 
 	pid1 = getpid();
 
@@ -63,19 +64,22 @@ int main(){
 	srand(time(NULL));
 
 	signal(SIGUSR1, sig_handler1);
-	signal(SIGINT, sig_handler2);
+	// signal(SIGINT, sig_handler2);
 
 
 	// Create Page Table
-	key_t ptb_key = ftok("Master.cpp", 56);
+	// key_t ptb_key = ftok("Master.cpp", 56);
+	key_t ptb_key = rand();
 	cout<<ptb_key<<endl;
 	int sm1id_pt = shmget(ptb_key, m*sizeof(sm1_t)*k, IPC_CREAT|0666);
+	printf("\npage table created.\n");
 	cout<<sm1id_pt<<endl;
 	if(sm1id_pt == -1){
 		cout<<errno<<endl;
 	}
 	sm1_t *pt_t = (sm1_t *)shmat(sm1id_pt, NULL, 0);
-	if(*(int *)pt_t == -1){
+	if(*(int *)pt_t == -1)
+	{
 		cout<<*(int *)pt_t<<endl;
 		cout<<errno<<endl;
 	}
@@ -85,11 +89,13 @@ int main(){
 		pt_t[i].frame_no = -1;
 		pt_t[i].valid = 0;
 	}
-
+	printf("\n%d page table initialized.\n");
+	printf("\n%d:%d for check.\n",pt_t[2].frame_no,pt_t[2].valid);
 
 
 	// Creat Free Frame List
-	key_t ff_key = ftok("Master.cpp", 66);
+	// key_t ff_key = ftok("Master.cpp", 66);
+	key_t ff_key = rand();
 	int sm2id_ff = shmget(ff_key, sizeof(sm2_t) + f*sizeof(int), IPC_CREAT|IPC_EXCL|0666);
 	sm2_t *ff_t = (sm2_t *)shmat(sm2id_ff, NULL, 0);
 
@@ -101,7 +107,8 @@ int main(){
 
 
 	// Create PCB
-	key_t pcb_key = ftok("Master.cpp", 67);
+	// key_t pcb_key = ftok("Master.cpp", 67);
+	key_t pcb_key = rand();
 	int sm3id_pcb = shmget(pcb_key, k*sizeof(sm3_t), IPC_CREAT|IPC_EXCL|0666);
 	sm3_t *pcb_t = (sm3_t *)shmat(sm3id_pcb, NULL, 0);
 
@@ -129,7 +136,8 @@ int main(){
 
 
 	// MQ1
-	key_t mq1_key = ftok("Master.cpp", 68);
+	// key_t mq1_key = ftok("Master.cpp", 68);
+	key_t mq1_key = rand();
 	int mq1id = msgget(mq1_key, IPC_CREAT|IPC_EXCL|0666);
 	if (mq1id == -1)
 	{
@@ -138,7 +146,8 @@ int main(){
 	}
 
 	// MQ2
-	key_t mq2_key = ftok("Master.cpp", 69);
+	// key_t mq2_key = ftok("Master.cpp", 69);
+	key_t mq2_key = rand();
 	int mq2id = msgget(mq2_key, IPC_CREAT|IPC_EXCL|0666);
 	if (mq2id == -1)
 	{
@@ -147,7 +156,8 @@ int main(){
 	}
 
 	// MQ3
-	key_t mq3_key = ftok("Master.cpp", 70);
+	// key_t mq3_key = ftok("Master.cpp", 70);
+	key_t mq3_key = rand();
 	int mq3id = msgget(mq3_key, IPC_CREAT|IPC_EXCL|0666);
 	if (mq3id == -1)
 	{
@@ -250,7 +260,6 @@ int main(){
 	msgctl(mq1id, IPC_RMID, NULL);
 	msgctl(mq2id, IPC_RMID, NULL);
 	msgctl(mq3id, IPC_RMID, NULL);
-
 
 	return 0;
 }
