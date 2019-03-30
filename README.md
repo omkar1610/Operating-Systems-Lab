@@ -24,4 +24,4 @@ Implementation of CPU scheduling using threads. Producer-Consumer problem is imp
 
 
 ### ASSIGNMENT 5
-Implementation of Demand Paging Algorithm by creating MMU and process scheduler that schedules processes in FCFS.
+Implementation of Demand Paging Algorithm by creating MMU and a scheduler that schedules the processes in an FCFS manner. Results of page faults for different processes have been calculated.
