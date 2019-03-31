@@ -1,0 +1,34 @@
+NAME: SARTHAK CHAKRABORTY
+ROLL: 16CS30044
+
+####################################
+		REPORT
+####################################
+
+
+1. Structures for Page Table (containing page nuber and valid bit), free frame list (containing frame number), and message queues are made.
+
+2. Master first generates unique keys and attaches to the different IPC shared memories and message queues. It then initializes the respective memory elements.
+
+3. Master calls execvp to scheduler, process and MMU and passes the requiered arguments.
+
+4. Generates page reference string for each process and passes them as argument to each process.
+
+5. In the scheduler, if nothing is being read from the ready queue and all processes have been completed, then send a signal to Master saying the processes is complete.
+
+6. Scheduler sends a signal to process for waking it up in FCFS manner.
+
+7. Take necessary actions regarding the message passed by MMU to scheduler (PAGE_FAULT_HANDLED or TERMINATED).
+
+8. Each process on waking up, sees the page reference string and demands for pages in order.
+
+9. If the MMU sends a valid frame number, it then continues and demands for the next page.
+
+10. If MMU sends -1, then pause the process.
+
+11. If the MMU is started and receives a valid page request from the process, it returns the corresponding frame number or -1 if the frame is not available in the frame is not free.
+
+12. If no free frame is available, sends -1 to the process and loads a frame from disk in the main memory, by replacing the vicitim page.
+
+13. After loading the requested frame, it then sends PAGE_FAULT_HANDLED to scheduler and waits for the next request to handle.
+

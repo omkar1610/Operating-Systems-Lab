@@ -73,6 +73,13 @@ struct mq2_t {
 };
 
 
+struct TLB{
+	int count;
+	int id;
+	int pageno;
+	int frame_no;
+};
+
 
 int sm1,sm2,sm3,mq1,mq2,mq3;
 sm1_t* sm1ptr;
@@ -84,7 +91,8 @@ ofstream fout("result.txt");
 
 int m, k, ktemp;
 int **rk;
-
+TLB *tlb;
+int s = 2;
 
 
 // Function to handle Page Fault
@@ -244,14 +252,27 @@ int serviceMRequest(){
 		msgsnd(mq2, &mt, sizeof(mq2_t) - sizeof(long), 0);
 	}
 	else{
+
+		// Search TLB, if found send the frame number to the process
+		for(int i=0; i<s; i++){
+			if(tlb[i].id == id && tlb[i].pageno == pageno){
+				mq3_st mt;
+				mt.mtype = id + MMUTOPRO;
+				mt.frameno = tlb[i].frame_no;
+				tlb[i].count = count;
+				msgsnd(mq3, &mt, sizeof(mq3_st) - sizeof(long), 0);
+				return 0;
+			}
+		}
 		
+
 		// If frame is not valid
 		if (sm1ptr[id*m + pageno].valid == 0)
 		{
 			// Page fault has occured
 			fout<<"Page Fault : ("<<id<<","<<pageno<<")\n";
 			
-			// Send frmae number = -1 to process
+			// Send frame number = -1 to process
 			mq3_st mtt;
 			mtt.mtype = id + MMUTOPRO;
 			mtt.frameno = -1;
@@ -265,7 +286,22 @@ int serviceMRequest(){
 			int fno = handlePageFault(id, pageno);
 			sm1ptr[id*m + pageno].valid = 1;
 			sm1ptr[id*m + pageno].frame_no = fno;
+
+
+			// Find the TLB index to be replaced using LRU
+			int min_count = INT_MAX, tlb_replace=0;
+			for(int i=0; i<s; i++){
+				if(tlb[i].count < min_count){
+					min_count = tlb[i].count;
+					tlb_replace = i;
+				}
+			}
+			tlb[tlb_replace].count = count;
+			tlb[tlb_replace].id = id;
+			tlb[tlb_replace].pageno = pageno;
+			tlb[tlb_replace].frame_no = fno;
 			
+
 			// Send PAGE_FAULT HANDLED to scheduler
 			mq2_t mt;
 			mt.mtype = PAGEFAULT_HANDLED;
@@ -273,7 +309,22 @@ int serviceMRequest(){
 		}
 		else{
 			fout<<"Page Found\n"<<endl;
-			
+
+			// Find the TLB index to be replaced using LRU
+			int min_count = INT_MAX, tlb_replace=0;
+			for(int i=0; i<s; i++){
+				if(tlb[i].count < min_count){
+					min_count = tlb[i].count;
+					tlb_replace = i;
+				}
+
+			}
+			tlb[tlb_replace].count = count;
+			tlb[tlb_replace].id = id;
+			tlb[tlb_replace].pageno = pageno;
+			tlb[tlb_replace].frame_no = sm1ptr[id*m+pageno].frame_no;
+
+
 			// Send frame number to process
 			mq3_st mt;
 			mt.mtype = id + MMUTOPRO;
@@ -298,6 +349,14 @@ int main(int argc, char const *argv[])
 	
 	signal(SIGUSR2, sig_handler);
 	signal(SIGTERM, sig_handler);
+
+	tlb = new TLB[s];
+	for(int i=0; i<s; i++){
+		tlb[i].count = 0;
+		tlb[i].id = -1;
+		tlb[i].pageno = -1;
+		tlb[i].frame_no = -1;
+	}
 
 	// 2D array that stores page fault details
 	rk = new int*[k];
