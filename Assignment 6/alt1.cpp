@@ -27,7 +27,6 @@ void init(int a, int b, int c){
 	file.sp.block_size = ::block_size;
 	file.sp.n_blocks = ::n_blocks;
 	file.sp.n_files = 0;
-	file.sp.vol = "FAT";
 	file.sp.free_block = (int *)malloc(::n_blocks*sizeof(int));
 	file.b1.fat = (int *)malloc((::n_blocks-3)*sizeof(int));
 	file.sp.ptr = &(file.b2);
@@ -211,8 +210,8 @@ int my_write(int fd, const char *buf, size_t count)
 				{
 					r = rand()%(file.sp.n_blocks-3);
 				}while(file.sp.free_block[r+3]!=0);
-				file.b1.fat[FD[fd].current_wblock]=r-3;
-				FD[fd].current_wblock=r-3;
+				file.b1.fat[FD[fd].current_wblock]=r;
+				FD[fd].current_wblock=r;
 				FD[fd].current_woffset=0;
 				continue;
 			}
@@ -313,8 +312,8 @@ int my_copy(int fd,int linuxfd,int flag)//if flag is 0 then copy from linuxfd to
 					{
 						r = rand()%(file.sp.n_blocks-3);
 					}while(file.sp.free_block[r+3]!=0);
-					file.b1.fat[FD[fd].current_wblock]=r-3;
-					FD[fd].current_wblock=r-3;
+					file.b1.fat[FD[fd].current_wblock]=r;
+					FD[fd].current_wblock=r;
 					FD[fd].current_woffset=0;
 					continue;
 				}

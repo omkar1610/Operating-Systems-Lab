@@ -47,7 +47,6 @@ struct block
 struct super_block
 {
 	int file_size, block_size, n_blocks, n_files;
-	string vol;
 	int *free_block;
 	block2 *ptr;
 };
