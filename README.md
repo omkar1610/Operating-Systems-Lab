@@ -25,3 +25,8 @@ Implementation of CPU scheduling using threads. Producer-Consumer problem is imp
 
 ### ASSIGNMENT 5
 Implementation of Demand Paging Algorithm by creating MMU and a scheduler that schedules the processes in an FCFS manner. Results of page faults for different processes have been calculated.
+
+
+### ASSIGNMENT 6
+a) Implementation of a linked list based FAT file system. Functions are defined that can be used as API calls form user program after including the header files.  
+b) Implementation of indexed based i-node file system.
