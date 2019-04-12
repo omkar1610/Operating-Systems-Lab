@@ -50,6 +50,12 @@ struct data_block{
 };
 
 
+struct dir_block{
+	char name[14];
+	short int inode;
+};
+
+
 struct file_sys{
 	super_block sp;
 	block1 b_inode;
