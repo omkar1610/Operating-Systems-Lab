@@ -1,0 +1,10 @@
+I have made a function getpointertonextentry
+is function mein you have to supply current inode no, current block no and block offset, indirectiontype(0 matlab direct, 1 matlab sip,2 matlab dip) and the offsets of dp, sip and dip(dipblockoffset1 pehle block ka offset hai and dipblockoffset2 is the offset of the block obtained from dipblockoffset1)
+You also have to supply how much you want to move by
+This function will update all the variables reflecting the new moved position (isliye pointers pass kiye hain)
+if return value is -1 uska matlab ki current data block is supposed to be the last data block but the move is leading out of it. In that case change the last data block by adding a new empty data block and its entry in the requisite position* and run the function again.
+If return value is -2 matlab poora system is full (wont happen most prob)
+
+So you now have the ability to move in your data block very very easily. Ab saare functions easily ban jaaenge. 
+
+*the requisite poition is the position where the new entry should go. For example, if return type is -1 and indirectiontype=0 and directoffset is 3 iska matlab hua dp[4] is not pointing to any data block and is -1. So make dp[4] point to a new empty data block. Now if you run the moveby again you will not get -1. (Remember to update the last_block_no entry inside the inode to the number of the block newly added)
