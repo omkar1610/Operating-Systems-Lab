@@ -11,9 +11,9 @@
 using namespace std;
 
 void init(long long int, long long int, long long int);
-int my_open(string);
+int my_open(char *);
 int my_read(int, char*, int);
-int my_write(int, const char*, size_t);
+int my_write(int, char*, int);
 int my_close(int);
 int my_cat(int);
 int my_copy(int, int, int);
@@ -26,7 +26,7 @@ int my_chdir(char *);
 struct super_block
 {
 	long long int file_sys_size, block_size, n_blocks, n_inodes;
-	string name;
+	char name[6];
 	int first_free_block;
 	bool *free_inode;
 };
