@@ -319,7 +319,7 @@ int my_rmdir(char *str)
 		if(indirectiontype == -1)
 			return -1;
 	}
-	
+
 	//go thru all the files associated with this and dealocate said files' blocks and inodes
 	//remove this folder entry from current directory
 	
@@ -434,7 +434,7 @@ int my_read(int fd, char* buf, int count)
 		
 		FD[fd].current_block = currentdatablockno;
 		FD[fd].current_offset = currentdatablockoffset;
-		FD[fd].indirectiontype = indirectiontype;
+		FD[fd].indirection_type = indirectiontype;
 		FD[fd].directoffset = directoffset;
 		FD[fd].index_sip = sipblockoffset;
 		FD[fd].index_dip1 = dipblockoffset1;
@@ -455,7 +455,7 @@ int my_read(int fd, char* buf, int count)
 
 			FD[fd].current_block = currentdatablockno;
 			FD[fd].current_offset = currentdatablockoffset;
-			FD[fd].indirectiontype = indirectiontype;
+			FD[fd].indirection_type = indirectiontype;
 			FD[fd].directoffset = directoffset;
 			FD[fd].index_sip = sipblockoffset;
 			FD[fd].index_dip1 = dipblockoffset1;
@@ -496,7 +496,7 @@ int my_write(int fd, char *buf, size_t count)
 		
 			FD[fd].current_wblock = currentdatablockno;
 			FD[fd].current_woffset = currentdatablockoffset;
-			FD[fd].windirectiontype = indirectiontype;
+			FD[fd].windirection_type = indirectiontype;
 			FD[fd].wdirectoffset = directoffset;
 			FD[fd].windex_sip = sipblockoffset;
 			FD[fd].windex_dip1 = dipblockoffset1;
@@ -521,7 +521,7 @@ int my_write(int fd, char *buf, size_t count)
 			
 			FD[fd].current_wblock = currentdatablockno;
 			FD[fd].current_woffset = currentdatablockoffset;
-			FD[fd].windirectiontype = indirectiontype;
+			FD[fd].windirection_type = indirectiontype;
 			FD[fd].wdirectoffset = directoffset;
 			FD[fd].windex_sip = sipblockoffset;
 			FD[fd].windex_dip1 = dipblockoffset1;
@@ -576,7 +576,7 @@ int my_cat(int fd){
 
 	while(1){
 		cout<<file.b[currentdatablockno].data[currentdatablockoffset];
-		if(buf[bufpointer-1]  = '\0')
+		if(file.b[currentdatablockno].data[currentdatablockoffset]  = '\0')
 			break;
 
 		indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);		

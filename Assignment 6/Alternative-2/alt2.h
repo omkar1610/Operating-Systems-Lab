@@ -10,7 +10,7 @@
 
 using namespace std;
 
-void init(int, int, int);
+void init(long long int, long long int, long long int);
 int my_open(string);
 int my_read(int, char*, int);
 int my_write(int, const char*, size_t);
@@ -25,7 +25,7 @@ int my_chdir(char *);
 
 struct super_block
 {
-	int file_sys_size, block_size, n_blocks, n_inodes;
+	long long int file_sys_size, block_size, n_blocks, n_inodes;
 	string name;
 	int first_free_block;
 	bool *free_inode;
@@ -64,11 +64,19 @@ struct FD_t
 	int valid;
 	int dir_inode_no;
 	int inode_no;
+
 	int indirection_type; // DP, SIP or DIP
 	int directoffset;
 	int index_sip; // Index for first level table where current block is present
 	int index_dip1; // Index for second level table where current block is present
 	int index_dip2;
+
+	int windirection_type; // DP, SIP or DIP
+	int wdirectoffset;
+	int windex_sip; // Index for first level table where current block is present
+	int windex_dip1; // Index for second level table where current block is present
+	int windex_dip2;
+
 	int current_block;
 	int current_offset;
 	int current_wblock;
