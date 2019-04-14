@@ -8,6 +8,8 @@ int file_size, block_size, n_blocks;
 file_sys file;
 vector<FD_t> FD;
 
+int cur_dir;
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 void init(int a, int b, int c){
@@ -17,7 +19,7 @@ void init(int a, int b, int c){
 
 	int i;
 
-	file.sp.file_size = ::file_size;
+	file.sp.file_sys_size = ::file_size;
 	file.sp.block_size = ::block_size;
 	file.sp.n_blocks = ::n_blocks;
 	file.sp.n_inodes = 2 * (::block_size/sizeof(inode));
@@ -42,7 +44,7 @@ void init(int a, int b, int c){
 	file.b_inode.iNode[0].free = false;
 	file.b_inode.iNode[0].type = false;
 	file.sp.free_inode[0] = false;
-	for(int i; i<file.b_inode.iNode[0].dp.size(); i++)
+	for(int i=0; i<5; i++)
 		file.b_inode.iNode[0].dp.push_back(-1);
 
 
@@ -72,7 +74,7 @@ int my_mkdir(char *str){
 		return -1;
 
 	// Now select the first free block and write the name of the directory and the inode number
-	int freeblock = file.sys.free_block;
+	int freeblock = file.sp.free_block;
 	int freeinode = -1;
 	dir_block d;
 	strcpy(d.name, str);
@@ -93,7 +95,8 @@ int my_mkdir(char *str){
 
 	file.sp.free_block = file.b[freeblock].next;  // New first free block stored in super block
 	file.b[freeblock].next = -1;
-	file.b[freeblock].data = (char *)d;
+	file.b[freeblock].type = 1;
+	file.b[freeblock].data = (char *)&d;
 
 	// Fill the necessary info in the selected inode and assign it as a directory type inode. Also mark the inode as not free
 	if(pointer_type == 0){
@@ -102,17 +105,19 @@ int my_mkdir(char *str){
 	file.b_inode.iNode[freeinode].free = false;
 	file.b_inode.iNode[freeinode].type = false;
 	file.sp.free_inode[freeinode] = false;
-	for(i; i<file.b_inode.iNode[freeinode].dp.size(); i++)
+	for(i=1; i<5; i++)
 		file.b_inode.iNode[0].dp.push_back(-1);
 
 	// Fill two DP with '.' and '..' that would point to its own inode and the inode of cur_dir
-	freeblock = file.sys.free_block;
+	freeblock = file.sp.free_block;
 	strcpy(d.name, "..");
 	d.inode = (short int)cur_dir; // Parent directory for the newly formed dir is the current directory
 
 	file.sp.free_block = file.b[freeblock].next;
 	file.b[freeblock].next = -1;
-	file.b[freeblock].data = (char *)d;
+	file.b[freeblock].type = 1;
+	file.b[freeblock].data = (char *)&d;
+	file.b_inode.iNode[freeinode].dp[0] = freeblock;
 
 	// return inode number
 	return freeinode;
@@ -123,12 +128,36 @@ int my_rmdir(char *str){
 	// Check if str is '.' or '..' , return -1
 	if(!strcmp(str, ".") || !strcmp(str, ".."))
 		return -1;
+
 	// in the current directory, scan through all the blocks pointed by DP, SIP and DIP until the name of the directory matches str
-	
+	int i;
+	int block;
+	dir_block d;
+	int found = -1;
+	for(i=1; i<file.b_inode.iNode[cur_dir].dp.size(); i++){
+		block = file.b_inode.iNode[cur_dir].dp[i];
+		if(file.b[block].type == 1){
+			char *a = file.b[block].data;
+			d = *(dir_block *)a;
+			if(!strcmp(d.name, str)){
+				found = i;
+				break;
+			}
+		}
+	}
+
 	// Get the corresponding inode number of the directory.
+	int inode = d.inode;
+
 	// Remove the entry from the block and if the block becomes free, add the free block to the linked llist of free block.
+	// NOW ASSUME ONLY 1 ENTRY
+	file.b[block].next = file.sp.free_block;
+	file.sp.free_block = block;
+
 	// Empty all the fields of the inode and also all the directories or files that were present in that directory
+
 	// On success return cur_dir (inode number of directory where the hypothetical pointer is)
+	return cur_dir;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -137,12 +166,46 @@ int my_chdir(char *str){
 	/////////// TO SUPPORT THIS WE NEED TO TOKENIZE STRING AND RUN THE FOLLOWING CODE IN A LOOP////////////
 
 	// Check if str is '.', if yes return cur_dir that stores the inode number
+	if(!strcmp(str, ".")){
+		return cur_dir;
+	}
+
 	// If str is '..', go to the DP where it is present(should be known beforehand), and find the inode number.
 	// Change the cur_dir to this inode and return cur_dir
+	if(!strcmp(str, "..")){
+		int block_parent_dir = file.b_inode.iNode[cur_dir].dp[0];
+		char *a = file.b[block_parent_dir].data;
+		dir_block d = *(dir_block *)a;
+		cur_dir = d.inode;
+		return cur_dir;
+	}
 
 	// In the current directory, scan through all the blocks pointed by DP, SIP, DIP until str matches
+	int i;
+	int block;
+	dir_block d;
+	int found = -1;
+	for(i=1; i<file.b_inode.iNode[cur_dir].dp.size(); i++){
+		block = file.b_inode.iNode[cur_dir].dp[i];
+		if(file.b[block].type == 1){
+			char *a = file.b[block].data;
+			d = *(dir_block *)a;
+			if(!strcmp(d.name, str)){
+				found = i;
+				break;
+			}
+		}
+	}
 	// Get the corresponding inode number and see if the type field of inode is false (dir), If no return -1
+	int inode = d.inode;
+	if(file.b_inode.iNode[inode].type == true){
+		return -1;
+	}
 	// If yes, change the cur_dir with the inode value and return it
+	else{
+		cur_dir = inode;
+		return cur_dir;
+	}	
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
