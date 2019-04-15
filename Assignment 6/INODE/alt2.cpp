@@ -34,9 +34,7 @@ void init(long long int a, long long int b, long long int c)
 	
 	file.b_inode.iNode = (inode *)malloc(file.sp.n_inodes * sizeof(inode));
 	file.sp.free_inode=(bool*)malloc(file.sp.n_inodes * sizeof(bool));
-	// for(i=0; i<file.sp.n_inodes; i++)
-	// 	file.b_inode.iNode[i].free = true;
-	// Populate free_inode list
+
 	bool topush=true;
 	
 	for(i=0; i<file.sp.n_inodes; i++)
@@ -52,16 +50,9 @@ void init(long long int a, long long int b, long long int c)
 			file.b[i].data[j] = '\0';
 	}
 	
-	// file.b_inode.iNode[0].free = false;
-	// file.b_inode.iNode[0].type = false;
-	
 	file.sp.free_inode[0] = false;
-	//cout<<"\nHere..."<<endl;
-	int tp=-1;
-	//for(int i=0; i<5; i++)
-	//	file.b_inode.iNode[0].dp.push_back(tp);
 
-	// LAST DATA BLOCK NOT INITIALIkeZED
+	int tp=-1;
 	file.b_inode.iNode[0].dp.resize(5,tp);
 	file.b_inode.iNode[0].dp[0] = SAME_DIR;
 	file.b_inode.iNode[0].dp[1] = file.sp.first_free_block;
@@ -80,7 +71,7 @@ int getpointertonextentry(int inodeno, int moveby, int* currentdatablockno, int*
 		if(file.b[*(currentdatablockno)-3].data[*currentdatablockoffset]==NULL) return (-3);
 		return (*indirectiontype);
 	}
-	else if(*currentdatablockno==file.b_inode.iNode[inodeno].last_data_block) // YE TO HOGA HI
+	else if(*currentdatablockno==file.b_inode.iNode[inodeno].last_data_block)
 	{
 		return -1;
 	}
@@ -146,25 +137,267 @@ int getpointertonextentry(int inodeno, int moveby, int* currentdatablockno, int*
 	}
 	else
 	{
-		cout<<"The file system is full"<<endl;
 		return -2;
 	}
-
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 int my_mkdir(char *str)
 {
-	// int notfound=0;
-	// int found=0;
-	// int toaddindirtype=0;
-	// int emptyposblock=-1;
-	// int emptyposoffset=-1;
+	if(!strcmp(str, ".") || !strcmp(str, ".."))
+		return -1;
 
 	int inodeno = cur_dir; //jobhi inode we are working on
 	int currentdatablockno;
-	if(cur_dir==0)
+	if(inodeno==0)
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
+	else
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[2];
+
+	int currentdatablockoffset = 0; //initially 0
+	int indirectiontype = 0; //initially 0
+	int directoffset = 0; //initially 0
+	int sipblockoffset = 0; //initially 0
+	int dipblockoffset1 = 0; //initially 0
+	int dipblockoffset2 = 0; //initially 0
+	// cout<<"Here......"<<endl;
+
+	//search if same named directory/file exists, if no return -1
+	int found=0;
+	int rv;
+	int foundinodeno;
+
+	do
+	{
+		char filename[15];
+		for(int i=0;i<14;i++){
+			filename[i]=file.b[currentdatablockno-3].data[currentdatablockoffset+i];
+		}
+		filename[14]='\0';
+		if(!strcmp(filename,str))
+		{
+			found=1;
+			int foundinodeno=*(short int*)(file.b[currentdatablockno-3].data+(int)(currentdatablockoffset)+14);
+			break;
+		}
+		rv=getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
+	}while(rv!=-1 && rv!=-3);
+	//if that file is a dir, return -2
+	//else add a new entry in this directory
+	if (found==0)
+	{
+		if(currentdatablockoffset+16<block_size)
+		{
+			for(int i=0;i<14;i++)
+			{
+				file.b[currentdatablockno-3].data[currentdatablockoffset+i]=str[i];
+			}
+
+		}
+		short int freeinode = -1;
+		for(int i=0; i<file.sp.n_inodes; i++)
+		{
+			if(file.sp.free_inode[i] == true)
+			{
+				freeinode = (short int)i;
+				break;
+			}
+		}
+		if(freeinode == -1)
+			return -1;
+		file.b_inode.iNode[freeinode].dp.resize(5,-1);
+		file.b_inode.iNode[freeinode].dp[0]=SAME_DIR;
+		file.b_inode.iNode[freeinode].dp[1]=cur_dir;
+		file.b_inode.iNode[freeinode].dp[2]=file.sp.first_free_block;
+		file.b_inode.iNode[freeinode].last_data_block=file.sp.first_free_block;
+		file.sp.first_free_block=file.b[file.sp.first_free_block-3].next;
+		file.sp.free_inode[freeinode]=false;
+		char* ptr=file.b[currentdatablockno-3].data+currentdatablockoffset+14;
+
+		sprintf(ptr,"%02hd",(short int)freeinode);
+		for(int i=0; i<2; i++)
+		{
+			file.b[currentdatablockno].data[currentdatablockoffset+14+i]=ptr[i];
+		}
+	}
+	else
+	{
+		cout<<"Same name file/directory already exists in the current directory"<<endl;
+		return -1;
+	}
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+int my_rmdir(char *str)
+{
+	if(!strcmp(str, ".") || !strcmp(str, ".."))
+		return -1;
+
+	int inodeno = cur_dir; //jobhi inode we are working on
+	int currentdatablockno;
+	if(inodeno==0)
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
+	else
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[2];
+	// cout<<currentdatablockno<<endl;
+	int currentdatablockoffset = 0; //initially 0
+	int indirectiontype = 0; //initially 0
+	int directoffset = 0; //initially 0
+	int sipblockoffset = 0; //initially 0
+	int dipblockoffset1 = 0; //initially 0
+	int dipblockoffset2 = 0; //initially 0
+	// cout<<"Here......"<<endl;
+
+	//search if same named directory/file exists, if no return -1
+	int found=0;
+	int rv;
+	int foundinodeno;
+	do
+	{
+		char filename[15];
+		for(int i=0;i<14;i++){
+			filename[i]=file.b[currentdatablockno-3].data[currentdatablockoffset+i];
+		}
+		filename[14]='\0';
+		if(!strcmp(filename,str))
+		{
+			found=1;
+			int foundinodeno=*(short int*)(file.b[currentdatablockno-3].data+(int)(currentdatablockoffset)+14);
+			break;
+		}
+		rv=getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
+	}while(rv!=-1 && rv!=-3);
+	//if that file is a dir, return -2
+	int dirtodelete;
+	//else add a new entry in this directory
+	if (found==1)
+	{
+		char ptr[3];
+		for(int i=0; i<2; i++)
+		{
+			ptr[i] = file.b[currentdatablockno].data[currentdatablockoffset+14+i];
+		}
+
+		ptr[2] = '\0';
+
+		dirtodelete = atoi(ptr);
+		for(int i=0;i<16;i++)
+			file.b[currentdatablockno-3].data[currentdatablockoffset+i]=-2;
+		int inodeno1 = dirtodelete; //jobhi inode we are working on
+		int _currentdatablockno;
+		if (inodeno1==0)
+			_currentdatablockno = file.b_inode.iNode[inodeno1].dp[1];  //initialize to dp[0] wala block no
+		else
+			_currentdatablockno = file.b_inode.iNode[inodeno1].dp[2];
+		int _currentdatablockoffset = 0; //initially 0
+		int _indirectiontype = 0; //initially 0
+		int _directoffset = 0; //initially 0
+		int _sipblockoffset = 0; //initially 0
+		int _dipblockoffset1 = 0; //initially 0
+		int _dipblockoffset2 = 0; //initially 0
+
+		//search if same named file exists, if no return -1
+		int rv;
+		int foundinodeno;
+		do
+		{
+			for(int i=0;i<16;i++)
+				file.b[_currentdatablockno-3].data[_currentdatablockoffset+i]=-2;
+			rv=getpointertonextentry(inodeno1, 16, &_currentdatablockno, &_currentdatablockoffset, &_indirectiontype, &_directoffset, &_sipblockoffset, &_dipblockoffset1, &_dipblockoffset2);
+		}while(rv!=-1 && rv!=-3);
+
+		return cur_dir;
+	}
+	else
+	{
+		cout<<"Same name file/directory does not exist in the current directory"<<endl;
+		return -1;
+	}
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+int my_chdir(char *str)
+{
+	if(!strcmp(str, "."))
+		return cur_dir;
+
+	if(!strcmp(str, "..")){
+		int a = cur_dir;
+		cur_dir = (prev_dir == -1)?-1:prev_dir;
+		if(cur_dir == -1){
+			cur_dir = a;
+			cout<<"This is home directory"<<endl;
+			return cur_dir;
+		}
+		prev_dir = file.b_inode.iNode[cur_dir].dp[1];
+
+	}
+	int inodeno = cur_dir; //jobhi inode we are working on
+	int currentdatablockno;
+	if(inodeno==0)
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
+	else
+		currentdatablockno = file.b_inode.iNode[cur_dir].dp[2];
+	// cout<<currentdatablockno<<endl;
+	int currentdatablockoffset = 0; //initially 0
+	int indirectiontype = 0; //initially 0
+	int directoffset = 0; //initially 0
+	int sipblockoffset = 0; //initially 0
+	int dipblockoffset1 = 0; //initially 0
+	int dipblockoffset2 = 0; //initially 0
+
+	//search if same named directory/file exists, if no return -1
+	int found=0;
+	int rv;
+	int foundinodeno;
+
+	do
+	{
+		char filename[15];
+		for(int i=0;i<14;i++){
+			filename[i]=file.b[currentdatablockno-3].data[currentdatablockoffset+i];
+		}
+		filename[14]='\0';
+		if(!strcmp(filename,str))
+		{
+			found=1;
+			int foundinodeno=*(short int*)(file.b[currentdatablockno-3].data+(int)(currentdatablockoffset)+14);
+			break;
+		}
+		rv=getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
+	}while(rv!=-1 && rv!=-3);
+	//if that file is a dir, return -2
+
+	//else add a new entry in this directory
+	if (found==1)
+	{
+		prev_dir=cur_dir;
+		char ptr[3];
+		for(int i=0; i<2; i++){
+			ptr[i] = file.b[currentdatablockno].data[currentdatablockoffset+14+i];
+		}
+		ptr[2] = '\0';
+
+		cur_dir = atoi(ptr);
+
+		return cur_dir;
+	}
+	else
+	{
+		cout<<"Same name file/directory does not exist in the current directory"<<endl;
+		return -1;
+	}
+
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+int my_open(char *str)
+{
+	int inodeno = cur_dir; //jobhi inode we are working on
+	int currentdatablockno ;
+	if (cur_dir==0)
 		currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
 	else
 		currentdatablockno = file.b_inode.iNode[cur_dir].dp[2];
@@ -174,261 +407,6 @@ int my_mkdir(char *str)
 	int sipblockoffset = 0; //initially 0
 	int dipblockoffset1 = 0; //initially 0
 	int dipblockoffset2 = 0; //initially 0
-	cout<<"Currently in block no : "<<currentdatablockno<<" and blockoffset : "<<currentdatablockoffset<<endl;
-	//search if same named file exists, if yes return -1
-	if(!strcmp(str, ".") || !strcmp(str, "..")){
-		return -1;
-	}
-	int i;
-	if(cur_dir == 0)
-		i=1;
-	else
-		i=2;
-	int block;
-	cout<<"i here is : "<<i<<endl;
-	for(i; i<5; i++)
-	{
-		currentdatablockno = file.b_inode.iNode[cur_dir].dp[i];
-		if(currentdatablockno == -1)
-			break;
-
-		char data[14];
-		// cout<<"HELLO"<<endl;
-		memcpy(data, file.b[currentdatablockno].data + currentdatablockoffset, 14);
-		// cout<<"HELLO"<<endl;
-		if(!strcmp(data, str))
-			return -1;
-
-		indirectiontype = getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-		if(indirectiontype == -1)
-			break;
-	}
-
-	//if no, 'add' an entry to the current directory blocks data
-	//find an empty inode
-	short int freeinode = -1;
-	for(i=0; i<file.sp.n_inodes; i++){
-		if(file.sp.free_inode[i] == true){
-			freeinode = (short int)i;
-			break;
-		}
-	}
-	if(freeinode == -1)
-		return -1;
-
-
-	if(file.sp.block_size - currentdatablockoffset >= 14){
-		cout<<"HELLO00"<<endl;
-		for(int i=0;i<14;i++)
-		{
-			cout<<"try"<<endl;
-			cout<<str[i]<<endl;
-			cout<<currentdatablockno<<endl;
-			cout<<currentdatablockoffset+i<<endl;
-			cout<<"WTF"<<endl;
-			file.b[currentdatablockno-3].data[currentdatablockoffset+i]=str[i];
-			cout<<file.b[currentdatablockno-3].data[currentdatablockoffset+i]<<endl;
-		}
-		// memcpy(file.b[currentdatablockno].data + currentdatablockoffset, str, 14);
-		cout<<"HELLO"<<endl;
-		indirectiontype = getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-	}
-	else{
-		int freeblock = file.sp.first_free_block;
-		file.sp.first_free_block = file.b[freeblock].next;
-
-		if(directoffset < 4){
-			file.b_inode.iNode[inodeno].dp[directoffset+1] = freeblock;
-		}
-		file.b_inode.iNode[cur_dir].last_data_block = freeblock;
-		// Do we need to change directoffset to directoffset+1 ?
-		memcpy(file.b[currentdatablockno].data + currentdatablockoffset, str, 14);
-		indirectiontype = getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-	}
-
-
-	if(file.sp.block_size - currentdatablockoffset >= 2){
-		memcpy(file.b[currentdatablockno].data + currentdatablockoffset, (char *)freeinode, 2);
-		indirectiontype = getpointertonextentry(cur_dir, 2, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-	}
-	else{
-		int freeblock = file.sp.first_free_block;
-		file.sp.first_free_block = file.b[freeblock].next;
-
-		if(directoffset < 4){
-			file.b_inode.iNode[inodeno].dp[directoffset+1] = freeblock;
-		}
-		file.b_inode.iNode[cur_dir].last_data_block = freeblock;
-		// Do we need to change directoffset to directoffset+1 ?
-		memcpy(file.b[currentdatablockno].data + currentdatablockoffset, (char *)freeinode, 2);
-		indirectiontype = getpointertonextentry(cur_dir, 2, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-	}
-	// memcpy(file.b[currentdatablockno].data + currentdatablockoffset, str, 14); //doubt
-
-	// indirectiontype = getpointertonextentry(cur_dir, 14, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-	// if(indirectiontype == -2)
-	// 	return -1;
-
-	// if(indirectiontype == -1){
-	// 	int freeblock = file.sp.first_free_block;
-	// 	file.sp.first_free_block = file.b[freeblock].next;
-
-	// 	file.b_inode.iNode[cur_dir].dp[directoffset+1] = freeblock;
-	// 	file.b_inode.iNode[cur_dir].last_data_block = freeblock;
-	// 	// Do we need to change directoffset to directoffset+1 ? 
-	// 	indirectiontype = getpointertonextentry(cur_dir, 14, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-	// }
-	// memcpy(file.b[currentdatablockno].data + currentdatablockoffset, (char *)freeinode, 2);
-	// indirectiontype = getpointertonextentry(cur_dir, 2, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-	// if(indirectiontype == -2)
-	// 	return -1;
-
-	// if(indirectiontype == -1){
-	// 	int freeblock = file.sp.first_free_block;
-	// 	file.sp.first_free_block = file.b[freeblock].next;
-
-	// 	file.b_inode.iNode[cur_dir].dp[directoffset+1] = freeblock;
-	// 	file.b_inode.iNode[cur_dir].last_data_block = freeblock;
-	// 	// Do we need to change directoffset to directoffset+1 ?
-	// 	indirectiontype = getpointertonextentry(cur_dir, 2, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-	// }
-
-	//in the empty inode, add the file name. Find an empty block and set that as startin block. Put . and .. info.
-	file.b_inode.iNode[freeinode].last_data_block = file.sp.first_free_block;
-	file.b_inode.iNode[freeinode].dp[0] = SAME_DIR;
-	file.b_inode.iNode[freeinode].sip = file.b_inode.iNode[freeinode].dip=-1;
-	file.b_inode.iNode[freeinode].dp[1] = cur_dir;
-
-	//return 1
-	return 1;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-int my_rmdir(char *str)
-{
-	int inodeno = cur_dir; //jobhi inode we are working on
-	int currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
-	int currentdatablockoffset = 0; //initially 0
-	int indirectiontype = 0; //initially 0
-	int directoffset = 0; //initially 0
-	int sipblockoffset = 0; //initially 0
-	int dipblockoffset1 = 0; //initially 0
-	int dipblockoffset2 = 0; //initially 0
-
-	//search if same named file exists, if no return -1
-	if(!strcmp(str, ".") || !strcmp(str, "..")){
-		return -1;
-	}
-	int i;
-	int block;
-	for(i=2; i<5; i++){
-		currentdatablockno = file.b_inode.iNode[cur_dir].dp[i];
-		if(currentdatablockno == -1)
-			break;
-
-		char data[14];
-		memcpy(data, file.b[currentdatablockno-3].data + currentdatablockoffset, 14);
-		if(!strcmp(data, str))
-			return -1;
-
-		indirectiontype = getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-		if(indirectiontype == -1)
-			return -1;
-	}
-
-	//go thru all the files associated with this and dealocate said files' blocks and inodes
-	//remove this folder entry from current directory
-	
-}
-
-////////////////////////////////////////////////////////////////////////////////////////
-int my_chdir(char *str)
-{
-	int inodeno = cur_dir; //jobhi inode we are working on
-	int currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
-	int currentdatablockoffset = 0; //initially 0
-	int indirectiontype = 0; //initially 0
-	int directoffset = 0; //initially 0
-	int sipblockoffset = 0; //initially 0
-	int dipblockoffset1 = 0; //initially 0
-	int dipblockoffset2 = 0; //initially 0
-
-	//search if same named file exists, if no return -1
-	if(!strcmp(str, "."))
-		return cur_dir;
-
-	if(!strcmp(str, "..")){
-		prev_dir = cur_dir;
-		cur_dir = file.b_inode.iNode[cur_dir].dp[1];
-		return cur_dir;
-	}
-
-	int i;
-	int block;
-	int foundblock = -1;
-	for(i=2; i<5; i++){
-		currentdatablockno = file.b_inode.iNode[cur_dir].dp[i];
-		if(currentdatablockno == -1)
-			break;
-
-		char data[14];
-		memcpy(data, file.b[currentdatablockno-3].data + currentdatablockoffset, 14);
-		if(!strcmp(data, str))
-			foundblock = currentdatablockno;
-
-		indirectiontype = getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-		if(indirectiontype == -2)
-			return -1;
-		if(indirectiontype == -1)
-			return -1;
-
-		if(foundblock != -1){
-			char inode[2];
-			memcpy(inode, file.b[currentdatablockno-3].data + currentdatablockoffset, 2);
-			int inode_no = *(short int *)inode;
-			indirectiontype = getpointertonextentry(cur_dir, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-			if(indirectiontype == -2)
-				return -1;
-			if(indirectiontype == -1)
-				return -1;
-			indirectiontype = getpointertonextentry(cur_dir, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
-
-
-			//update current and prev directory.
-			prev_dir = cur_dir;
-			cur_dir = inode_no;
-			return cur_dir;
-		}
-	}
-	return -1;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-int my_open(char *str)
-{
-	// cout<<"Here......"<<endl;
-	int inodeno = cur_dir; //jobhi inode we are working on
-	int currentdatablockno = file.b_inode.iNode[cur_dir].dp[1];  //initialize to dp[0] wala block no
-	cout<<currentdatablockno<<endl;
-	int currentdatablockoffset = 0; //initially 0
-	int indirectiontype = 0; //initially 0
-	int directoffset = 0; //initially 0
-	int sipblockoffset = 0; //initially 0
-	int dipblockoffset1 = 0; //initially 0
-	int dipblockoffset2 = 0; //initially 0
-	// cout<<"Here......"<<endl;
 
 	//search if same named file exists, if no return -1
 	int found=0;
@@ -449,25 +427,18 @@ int my_open(char *str)
 		}
 		rv=getpointertonextentry(cur_dir, 16, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
 	}while(rv!=-1 && rv!=-3);
-	//if that file is a dir, return -2
-	cout<<found<<endl;
-	// if(file.b_inode.iNode[foundinodeno].type==DIRECTORY)
-		// return -2;
 
 	//else 'make' a new FD table entry and return its index
 	if (found==0)
 	{
-		// cout<<"HELLO"<<endl;
-		for(int i=0;i<FD.size();i++)
+		for(int j=0;j<FD.size();j++)
 		{
-			// cout<<"HELLO"<<endl;
-			if(FD[i].valid==0)
+			if(FD[j].valid==0)
 			{
-				// cout<<"HELLO"<<endl;
-				FD[i].valid=1;
-				//FD[i].dir_no=cur_dir;
+				FD[j].valid=1;
+
 				short int freeinode = -1;
-				for(i=0; i<file.sp.n_inodes; i++)
+				for(int i=0; i<file.sp.n_inodes; i++)
 				{
 					if(file.sp.free_inode[i] == true)
 					{
@@ -475,25 +446,27 @@ int my_open(char *str)
 						break;
 					}
 				}
-				cout<<freeinode<<endl;
+
 				if(freeinode == -1)
 					return -1;
-				FD[i].current_block=file.b_inode.iNode[freeinode].dp[0];
+				FD[j].inode_no = freeinode;
+				file.b_inode.iNode[freeinode].dp.resize(5,-1);
 				file.b_inode.iNode[freeinode].dp[0]=file.sp.first_free_block;
 				file.b_inode.iNode[freeinode].last_data_block=file.sp.first_free_block;
 				file.sp.first_free_block=file.b[file.sp.first_free_block-3].next;
 				file.sp.free_inode[freeinode]=false;
-				FD[i].current_offset=0;
-				FD[i].current_wblock=file.b_inode.iNode[freeinode].dp[0];
-				FD[i].current_woffset=0;
-				return i;
+				FD[j].current_block=file.b_inode.iNode[freeinode].dp[0];
+				FD[j].current_offset=0;
+				FD[j].current_wblock=file.b_inode.iNode[freeinode].dp[0];
+				FD[j].current_woffset=0;
+				return j;
 			}
 		}
 		FD_t tempfd;
 		tempfd.valid=1;
-		//tempfd.dir_no=cur_dir;
 		short int freeinode = -1;
-		for(int i=0; i<file.sp.n_inodes; i++)
+		int i;
+		for(i=0; i<file.sp.n_inodes; i++)
 		{
 			if(file.sp.free_inode[i] == true)
 			{
@@ -505,6 +478,7 @@ int my_open(char *str)
 		if(freeinode == -1)
 			return -1;
 
+		tempfd.inode_no = freeinode;
 		file.b_inode.iNode[freeinode].dp.resize(5,-1);
 		file.b_inode.iNode[freeinode].dp[0]=file.sp.first_free_block;
 		file.b_inode.iNode[freeinode].last_data_block = file.sp.first_free_block;
@@ -524,13 +498,18 @@ int my_open(char *str)
 	else
 	{
 		//create free inode
-		for(int i=0;i<FD.size();i++)
+		int i;
+		for(i=0;i<FD.size();i++)
 		{
 			if(FD[i].valid==0)
 			{
 				FD[i].valid=1;
-				//FD[i].dir_no=cur_dir;
 				short int freeinode = foundinodeno;
+				FD[i].inode_no = freeinode;
+
+				file.b_inode.iNode[freeinode].dp.resize(5,-1);
+				file.b_inode.iNode[freeinode].dp[0]=file.sp.first_free_block;
+
 				FD[i].current_block=file.b_inode.iNode[freeinode].dp[0];
 				file.b_inode.iNode[freeinode].dp[0]=file.sp.first_free_block;
 				file.b_inode.iNode[freeinode].last_data_block=file.sp.first_free_block;
@@ -544,9 +523,10 @@ int my_open(char *str)
 		}
 		FD_t tempfd;
 		tempfd.valid=1;
-		//tempfd.dir_no=cur_dir;
+
 		short int freeinode = foundinodeno;
 
+		FD[i].inode_no = freeinode;
 		file.b_inode.iNode[freeinode].dp.resize(5,-1);
 		file.b_inode.iNode[freeinode].dp[0]=file.sp.first_free_block;
 		file.b_inode.iNode[freeinode].last_data_block = file.sp.first_free_block;
@@ -650,7 +630,9 @@ int my_write(int fd, char *buf, int count)
 	int i;
 	int bufpointer = 0;
 	for(i=0; i<count; i++){
-		if(file.sp.block_size - currentdatablockoffset >= 1){
+		if(file.sp.block_size - currentdatablockoffset >= 1)
+		{
+
 			file.b[FD[fd].current_block-3].data[FD[fd].current_woffset] = buf[bufpointer++];
 			if(buf[bufpointer-1] == '\0')
 				break;
@@ -735,10 +717,9 @@ int my_cat(int fd){
 	{
 		return -1;
 	}
-
 	while(1){
 		cout<<file.b[currentdatablockno-3].data[currentdatablockoffset];
-		if(file.b[currentdatablockno-3].data[currentdatablockoffset]  = '\0')
+		if(file.b[currentdatablockno-3].data[currentdatablockoffset]  == '\0')
 			break;
 
 		indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);		
@@ -760,4 +741,131 @@ int my_cat(int fd){
 		}
 	}
 	cout<<endl;
+	return 1;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+int my_copy(int fd, int linuxfd, int flag){  // flag = 0 means from linuxfd to fd, flag = 1 means from fd to linuxfd
+	if(flag == 0){
+
+		if(fd>=FD.size() || fd<0 || FD[fd].valid==0)
+		{
+			return -1;
+		}
+		//read from location pointed to by buffer(count no of characters and store in fp to ahead
+		char ch;
+		int c;
+		int bufpointer = 0;
+
+		int inodeno = FD[fd].inode_no; //jobhi inode we are working on
+		int currentdatablockno = FD[fd].current_wblock;  //initialize to dp[0] wala block no
+		int currentdatablockoffset = FD[fd].current_woffset; //initially 0
+		int indirectiontype = FD[fd].windirection_type; //initially 0
+		int directoffset = FD[fd].wdirectoffset; //initially 0
+		int sipblockoffset = FD[fd].windex_sip; //initially 0
+		int dipblockoffset1 = FD[fd].windex_dip1; //initially 0
+		int dipblockoffset2 = FD[fd].windex_dip2; //initially 0
+
+		while(1){
+			c = read(linuxfd, &ch, 1);
+			bufpointer += c;
+			if(c<1)
+				break;
+
+			if(file.sp.block_size - currentdatablockoffset >= 1)
+			{
+
+				file.b[FD[fd].current_block-3].data[FD[fd].current_woffset] = ch;
+				indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);		
+			
+				FD[fd].current_wblock = currentdatablockno;
+				FD[fd].current_woffset = currentdatablockoffset;
+				FD[fd].windirection_type = indirectiontype;
+				FD[fd].wdirectoffset = directoffset;
+				FD[fd].windex_sip = sipblockoffset;
+				FD[fd].windex_dip1 = dipblockoffset1;
+				FD[fd].windex_dip2 = dipblockoffset2;
+				
+				if(indirectiontype == -2)
+					return -1;
+			}
+			else{
+				int freeblock = file.sp.first_free_block;
+				file.sp.first_free_block = file.b[freeblock-3].next;
+
+				if(directoffset < 4){
+					file.b_inode.iNode[inodeno].dp[directoffset+1] = freeblock;
+				}
+				file.b_inode.iNode[inodeno].last_data_block = freeblock;
+
+				file.b[FD[fd].current_block-3].data[FD[fd].current_woffset] = ch;
+
+				indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
+				
+				FD[fd].current_wblock = currentdatablockno;
+				FD[fd].current_woffset = currentdatablockoffset;
+				FD[fd].windirection_type = indirectiontype;
+				FD[fd].wdirectoffset = directoffset;
+				FD[fd].windex_sip = sipblockoffset;
+				FD[fd].windex_dip1 = dipblockoffset1;
+				FD[fd].windex_dip2 = dipblockoffset2;
+
+				if(indirectiontype == -2)
+					return -1;
+
+			}
+			
+		}
+		return bufpointer;
+	}
+	
+	else if(flag == 1){
+		if(fd>=FD.size() || fd<0 || FD[fd].valid==0)
+		{
+			return -1;
+		}
+
+		char ch;
+		int c;
+		int bufpointer = 0;
+
+		int inodeno = FD[fd].inode_no; //jobhi inode we are working on
+		int currentdatablockno = file.b_inode.iNode[FD[fd].inode_no].dp[0];  //initialize to dp[0] wala block no
+		int currentdatablockoffset = 0; //initially 0
+		int indirectiontype = 0; //initially 0
+		int directoffset = 0; //initially 0
+		int sipblockoffset = 0; //initially 0
+		int dipblockoffset1 = 0; //initially 0
+		int dipblockoffset2 = 0; //initially 0
+
+		while(1){
+			ch = file.b[currentdatablockno-3].data[currentdatablockoffset];
+			if(ch == '\0') break;
+			c = write(linuxfd, &ch, 1);
+			bufpointer += 1;
+			if(c<1)
+				break;
+
+			indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);		
+			
+			
+			if(indirectiontype == -2)
+				return -1;
+			if(indirectiontype == -1){
+				int freeblock = file.sp.first_free_block;
+				file.sp.first_free_block = file.b[freeblock-3].next;
+
+				if(directoffset < 4){
+					file.b_inode.iNode[inodeno].dp[directoffset+1] = freeblock;
+				}
+				file.b_inode.iNode[inodeno].last_data_block = freeblock;
+
+				indirectiontype = getpointertonextentry(inodeno, 1, &currentdatablockno, &currentdatablockoffset, &indirectiontype, &directoffset, &sipblockoffset, &dipblockoffset1, &dipblockoffset2);
+				continue;
+			}
+		}
+		return bufpointer;
+	}
+	else
+		return -1;
 }
