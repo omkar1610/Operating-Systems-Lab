@@ -28,5 +28,5 @@ Implementation of Demand Paging Algorithm by creating MMU and a scheduler that s
 
 
 ### ASSIGNMENT 6
-a) Implementation of a linked list based FAT file system. Functions are defined that can be used as API calls form user program after including the header files.  
-b) Implementation of indexed based i-node file system.
+a) Implementation of a linked list based FAT file system. Functions are defined that can be used as API calls from user program after including the header files.  
+b) Implementation of indexed based i-node file system with the scope of mkdir, chdir and rmdir. Functions are defined as API calls from user program.
